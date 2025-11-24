@@ -15,7 +15,12 @@ class CourtService {
     String? sessionId,
     String? csrfToken,
   })  : _client = client ?? http.Client(),
-        _baseUrl = _normalizeBaseUrl(baseUrl),
+        _baseUrl = _normalizeBaseUrl(
+          baseUrl ?? const String.fromEnvironment(
+            'COURT_BASE_URL',
+            defaultValue: _defaultBaseUrl,
+          ),
+        ),
         _sessionId = sessionId,
         _csrfToken = csrfToken;
 
