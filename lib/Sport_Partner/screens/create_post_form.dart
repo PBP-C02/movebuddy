@@ -214,7 +214,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text("Post berhasil dibuat!")),
                           );
-                          Navigator.pop(context); // Kembali ke halaman list
+                          Navigator.pop(context, true); // Kembali ke halaman list
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

@@ -37,11 +37,14 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
         backgroundColor: Colors.blueAccent,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+        final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const CreatePostPage()),
           );
+          if (result == true) {
+            setState(() {});
+          } 
         },
         child: const Icon(Icons.add),
       ),
