@@ -4,12 +4,21 @@ import 'package:provider/provider.dart';
 import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
 import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
 
+import 'court/screens/courts_list_screen.dart';
+import 'court/services/court_service.dart';
+
 void main() {
-  runApp(const MyApp());
+  const overrideBaseUrl = String.fromEnvironment('COURT_BASE_URL');
+  final courtService = CourtService(
+    baseUrl: overrideBaseUrl.isEmpty ? null : overrideBaseUrl,
+  );
+  runApp(MoveBuddyApp(courtService: courtService));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MoveBuddyApp extends StatelessWidget {
+  const MoveBuddyApp({super.key, required this.courtService});
+
+  final CourtService courtService;
 
   @override
   Widget build(BuildContext context) {

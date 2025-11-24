@@ -1,15 +1,17 @@
+// lib/Court/screens/courts_list_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 import '../models/court.dart';
 import '../services/court_service.dart';
 import '../widgets/court_card.dart';
 import '../utils/court_helpers.dart';
-// import 'court_detail_screen.dart';
+import 'court_detail_screen.dart';
+import 'add_court_screen.dart';
 
 class CourtsListScreen extends StatefulWidget {
-  final CourtService courtService;
-
-  const CourtsListScreen({Key? key, required this.courtService})
-    : super(key: key);
+  const CourtsListScreen({Key? key}) : super(key: key);
 
   @override
   State<CourtsListScreen> createState() => _CourtsListScreenState();
@@ -23,6 +25,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
   String _selectedLocation = '';
   String _searchQuery = '';
   bool _availableOnly = false;
+  String? _errorMessage;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -39,10 +42,19 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
   }
 
   Future<void> _loadCourts() async {
-    setState(() => _isLoading = true);
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
-      final courts = await widget.courtService.getAllCourts();
+      final request = context.read<CookieRequest>();
+      final courtService = CourtService(request: request);
+      
+      final courts = await courtService.getAllCourts();
+      
       if (mounted) {
         setState(() {
           _courts = courts;
@@ -51,12 +63,21 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
         });
       }
     } catch (e) {
+      print('Error loading courts: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Gagal memuat data lapangan. Silakan coba lagi.';
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading courts: $e'),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _loadCourts,
+            ),
           ),
         );
       }
@@ -106,16 +127,18 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
                         ),
                       ),
                     )
-                  : Column(
-                      children: [
-                        _buildFilters(),
-                        Expanded(
-                          child: _filteredCourts.isEmpty
-                              ? _buildEmptyState()
-                              : _buildCourtsList(),
+                  : _errorMessage != null
+                      ? _buildErrorState()
+                      : Column(
+                          children: [
+                            _buildFilters(),
+                            Expanded(
+                              child: _filteredCourts.isEmpty
+                                  ? _buildEmptyState()
+                                  : _buildCourtsList(),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
             ),
           ],
         ),
@@ -152,11 +175,16 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
             icon: const Icon(Icons.add_circle_outline),
             color: const Color(0xFF64748B),
             tooltip: 'Add Court',
-            onPressed: () {
-              // TODO: Navigate to add court screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Add Court feature coming soon')),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddCourtScreen(courtService: context.read<CourtService>(),),
+                ),
               );
+              if (result == true) {
+                _loadCourts();
+              }
             },
           ),
           IconButton(
@@ -436,16 +464,19 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
         itemBuilder: (context, index) {
           return CourtCard(
             court: _filteredCourts[index],
-            onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => CourtDetailScreen(
-              //       courtId: _filteredCourts[index].id,
-              //       courtService: widget.courtService,
-              //     ),
-              //   ),
-              // ).then((_) => _loadCourts());
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CourtDetailScreen(
+                    courtId: _filteredCourts[index].id,
+                    courtService: context.read<CourtService>(),
+                  ),
+                ),
+              );
+              if (result == true) {
+                _loadCourts();
+              }
             },
           );
         },
@@ -524,6 +555,35 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
     );
   }
 
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage ?? 'Terjadi kesalahan',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loadCourts,
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _showLogoutDialog(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -546,10 +606,8 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
     );
 
     if (confirm == true && mounted) {
-      // TODO: Call auth service logout
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logout functionality coming soon')),
-      );
+      // TODO: Implement proper logout
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 }
