@@ -1,278 +1,206 @@
-// lib/court/services/court_service.dart
+// lib/Court/services/court_service.dart
 
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:http/http.dart' as http;
-
+import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court.dart';
 import '../utils/court_helpers.dart';
 
 class CourtService {
+  final CookieRequest request;
+  final String baseUrl;
+
   CourtService({
-    http.Client? client,
+    required this.request,
     String? baseUrl,
-    String? sessionId,
-    String? csrfToken,
-  })  : _client = client ?? http.Client(),
-        _baseUrl = _normalizeBaseUrl(
-          baseUrl ?? const String.fromEnvironment(
-            'COURT_BASE_URL',
-            defaultValue: _defaultBaseUrl,
-          ),
-        ),
-        _sessionId = sessionId,
-        _csrfToken = csrfToken;
+  }) : baseUrl = _normalizeBaseUrl(
+          baseUrl ??
+              const String.fromEnvironment(
+                'COURT_BASE_URL',
+                defaultValue: 'http://127.0.0.1:8000',
+              ),
+        );
 
-  static const String _defaultBaseUrl =
-      'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id';
-
-  final http.Client _client;
-  final String _baseUrl;
-  String? _sessionId;
-  String? _csrfToken;
-
-  String get baseUrl => _baseUrl;
-  String? get sessionId => _sessionId;
-  String? get csrfToken => _csrfToken;
-
-  static String _normalizeBaseUrl(String? baseUrl) {
-    if (baseUrl == null || baseUrl.isEmpty) return _defaultBaseUrl;
-    return baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-  }
-
-  Uri _uri(String path, [Map<String, String>? params]) {
-    final uri = Uri.parse('$_baseUrl$path');
-    if (params == null) return uri;
-    return uri.replace(queryParameters: params);
-  }
-
-  Map<String, String> _headers({bool json = true, bool withCsrf = false}) {
-    final headers = <String, String>{
-      HttpHeaders.acceptHeader: 'application/json',
-    };
-    if (json) headers[HttpHeaders.contentTypeHeader] = 'application/json';
-
-    final cookieParts = <String>[];
-    if (_sessionId != null) cookieParts.add('sessionid=$_sessionId');
-    if (_csrfToken != null) cookieParts.add('csrftoken=$_csrfToken');
-    if (cookieParts.isNotEmpty) {
-      headers[HttpHeaders.cookieHeader] = cookieParts.join('; ');
+  static String _normalizeBaseUrl(String value) {
+    if (value.endsWith('/')) {
+      return value.substring(0, value.length - 1);
     }
-    if (withCsrf && _csrfToken != null) {
-      headers['X-CSRFToken'] = _csrfToken!;
-    }
-    return headers;
+    return value;
   }
 
-  void _captureCookies(http.BaseResponse response) {
-    final setCookie = response.headers['set-cookie'];
-    if (setCookie == null) return;
-
-    final sessionMatch = RegExp(r'sessionid=([^;]+)').firstMatch(setCookie);
-    final csrfMatch = RegExp(r'csrftoken=([^;]+)').firstMatch(setCookie);
-
-    if (sessionMatch != null) {
-      _sessionId = sessionMatch.group(1);
-    }
-    if (csrfMatch != null) {
-      _csrfToken = csrfMatch.group(1);
-    }
+  String _buildUrl(String path) {
+    return '$baseUrl$path';
   }
 
-  void _ensureCsrfToken() {
-    if (_csrfToken == null) {
-      throw Exception('CSRF token is missing. Call login() first.');
-    }
-  }
-
-  void hydrateSession({
-    String? sessionId,
-    String? csrfToken,
-  }) {
-    _sessionId = sessionId ?? _sessionId;
-    _csrfToken = csrfToken ?? _csrfToken;
-  }
-
-  Future<bool> login({
-    required String email,
-    required String password,
-  }) async {
-    final loginUri = _uri('/login/');
-
-    // Prefetch CSRF token cookie
-    final csrfResp = await _client.get(loginUri);
-    _captureCookies(csrfResp);
-
-    final response = await _client.post(
-      loginUri,
-      headers: _headers(withCsrf: true),
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-    _captureCookies(response);
-
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    if (response.statusCode == 200 && body['success'] == true) {
-      return true;
-    }
-    throw Exception(body['message'] ?? 'Login failed (${response.statusCode})');
-  }
-
-  Future<void> logout() async {
-    final response = await _client.get(
-      _uri('/logout/'),
-      headers: _headers(json: false),
-    );
-    if (response.statusCode == 200) {
-      _sessionId = null;
-      _csrfToken = null;
-      return;
-    }
-    throw Exception('Logout failed (${response.statusCode})');
-  }
-
+  /// Get all courts or search with filters
   Future<List<Court>> getAllCourts({
     String? query,
     String? sport,
     String? location,
   }) async {
-    final hasFilters = (query ?? '').isNotEmpty ||
-        (sport ?? '').isNotEmpty ||
-        (location ?? '').isNotEmpty;
+    try {
+      final hasFilters = (query ?? '').isNotEmpty ||
+          (sport ?? '').isNotEmpty ||
+          (location ?? '').isNotEmpty;
 
-    final uri = hasFilters
-        ? _uri('/court/api/court/search/', {
-            if (query != null && query.isNotEmpty) 'q': query,
-            if (sport != null && sport.isNotEmpty) 'sport': sport,
-            if (location != null && location.isNotEmpty) 'location': location,
-          })
-        : _uri('/court/api/court/');
+      String url;
+      if (hasFilters) {
+        final params = <String, String>{};
+        if (query != null && query.isNotEmpty) params['q'] = query;
+        if (sport != null && sport.isNotEmpty) params['sport'] = sport;
+        if (location != null && location.isNotEmpty) params['location'] = location;
+        
+        final queryString = params.entries
+            .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+            .join('&');
+        url = _buildUrl('/court/api/court/search/?$queryString');
+      } else {
+        url = _buildUrl('/court/api/court/');
+      }
 
-    final response = await _client.get(uri, headers: _headers(json: false));
-    _captureCookies(response);
+      final response = await request.get(url);
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load courts (${response.statusCode})');
+      if (response == null) {
+        throw Exception('Response is null');
+      }
+
+      // Handle different response formats
+      List<dynamic> courtsRaw;
+      if (response is Map) {
+        // Response is a map, look for 'Court' or 'court' key
+        courtsRaw = (response['Court'] ?? response['court'] ?? []) as List<dynamic>;
+      } else if (response is List) {
+        // Response is already a list
+        courtsRaw = response;
+      } else {
+        throw Exception('Unexpected response format: ${response.runtimeType}');
+      }
+
+      return courtsRaw
+          .map((json) => Court.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Error in getAllCourts: $e');
+      rethrow;
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final listKey = hasFilters ? 'court' : 'Court';
-    final courtsRaw = data[listKey] as List<dynamic>? ?? [];
-
-    return courtsRaw
-        .map((json) => Court.fromJson(json as Map<String, dynamic>))
-        .toList();
   }
 
+  /// Get single court detail
   Future<Court> getCourtDetail(int courtId) async {
-    final response = await _client.get(
-      _uri('/court/api/court/$courtId/'),
-      headers: _headers(json: false),
-    );
-    _captureCookies(response);
+    try {
+      final response = await request.get(_buildUrl('/court/api/court/$courtId/'));
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load court ($courtId)');
+      if (response == null) {
+        throw Exception('Court not found');
+      }
+
+      // Handle response format
+      Map<String, dynamic> courtJson;
+      if (response is Map) {
+        courtJson = (response['court'] ?? response) as Map<String, dynamic>;
+      } else {
+        throw Exception('Unexpected response format');
+      }
+
+      return Court.fromJson(courtJson);
+    } catch (e) {
+      print('Error in getCourtDetail: $e');
+      rethrow;
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final courtJson = data['court'] as Map<String, dynamic>;
-    return Court.fromJson(courtJson);
   }
 
+  /// Check availability for a specific date
   Future<Map<String, dynamic>> getAvailability(int courtId, DateTime date) async {
-    final response = await _client.get(
-      _uri('/court/api/court/$courtId/availability/', {
-        'date': CourtHelpers.formatDateForApi(date),
-      }),
-      headers: _headers(json: false),
-    );
+    try {
+      final dateStr = CourtHelpers.formatDateForApi(date);
+      final response = await request.get(
+        _buildUrl('/court/api/court/$courtId/availability/?date=$dateStr'),
+      );
 
-    _captureCookies(response);
+      if (response == null) {
+        throw Exception('Failed to check availability');
+      }
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to check availability (${response.statusCode})');
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      print('Error in getAvailability: $e');
+      rethrow;
     }
-
-    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  /// Set availability for a court on a specific date
   Future<bool> setAvailability(
     int courtId,
     DateTime date,
     bool isAvailable,
   ) async {
-    _ensureCsrfToken();
+    try {
+      final response = await request.postJson(
+        _buildUrl('/court/api/court/$courtId/availability/set/'),
+        jsonEncode({
+          'date': CourtHelpers.formatDateForApi(date),
+          'is_available': isAvailable,
+        }),
+      );
 
-    final response = await _client.post(
-      _uri('/court/api/court/$courtId/availability/set/'),
-      headers: _headers(withCsrf: true),
-      body: jsonEncode({
-        'date': CourtHelpers.formatDateForApi(date),
-        'is_available': isAvailable,
-      }),
-    );
+      if (response == null) {
+        return false;
+      }
 
-    _captureCookies(response);
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update availability (${response.statusCode})');
+      return response['success'] == true;
+    } catch (e) {
+      print('Error in setAvailability: $e');
+      rethrow;
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final successValue = data['success'];
-    return successValue == true ||
-        successValue?.toString().toLowerCase() == 'true';
   }
 
+  /// Generate WhatsApp booking link
   Future<String> getWhatsAppLink(
     int courtId, {
     String? date,
     String? time,
   }) async {
-    final response = await _client.post(
-      _uri('/court/api/court/whatsapp/link/'),
-      headers: _headers(),
-      body: jsonEncode({
-        'court_id': courtId,
-        if (date != null) 'date': date,
-        if (time != null) 'time': time,
-      }),
-    );
-
-    _captureCookies(response);
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to generate WhatsApp link (${response.statusCode})',
+    try {
+      final response = await request.postJson(
+        _buildUrl('/court/api/court/whatsapp/link/'),
+        jsonEncode({
+          'court_id': courtId,
+          if (date != null) 'date': date,
+          if (time != null) 'time': time,
+        }),
       );
-    }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    if (data['success'] == true && data['whatsapp_link'] != null) {
-      return data['whatsapp_link'] as String;
+      if (response == null || response['success'] != true) {
+        throw Exception('Failed to generate WhatsApp link');
+      }
+
+      return response['whatsapp_link'] as String;
+    } catch (e) {
+      print('Error in getWhatsAppLink: $e');
+      rethrow;
     }
-    throw Exception(data['error'] ?? 'Cannot build WhatsApp link');
   }
 
+  /// Delete a court (owner only)
   Future<bool> deleteCourt(int courtId) async {
-    _ensureCsrfToken();
+    try {
+      final response = await request.post(
+        _buildUrl('/court/api/court/$courtId/delete/'),
+        {},
+      );
 
-    final response = await _client.post(
-      _uri('/court/api/court/$courtId/delete/'),
-      headers: _headers(withCsrf: true),
-    );
+      if (response == null) {
+        return false;
+      }
 
-    _captureCookies(response);
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete court (${response.statusCode})');
+      return response['success'] == true;
+    } catch (e) {
+      print('Error in deleteCourt: $e');
+      rethrow;
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return data['success'] == true;
   }
 
+  /// Add a new court
   Future<bool> addCourt({
     required String name,
     required String sportType,
@@ -286,40 +214,37 @@ class CourtService {
     File? image,
     String? mapsLink,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      _uri('/court/api/court/add/'),
-    );
+    try {
+      // Note: pbp_django_auth doesn't have built-in multipart support
+      // We'll use postJson for now without image
+      final response = await request.postJson(
+        _buildUrl('/court/api/court/add/'),
+        jsonEncode({
+          'name': name,
+          'sport_type': sportType,
+          'location': location,
+          'address': address,
+          'price_per_hour': pricePerHour.toString(),
+          'owner_phone': ownerPhone,
+          'facilities': facilities ?? '',
+          'rating': (rating ?? 0).toString(),
+          'description': description ?? '',
+          'maps_link': mapsLink ?? '',
+        }),
+      );
 
-    request.headers.addAll(_headers(json: false));
-    request.fields.addAll({
-      'name': name,
-      'sport_type': sportType,
-      'location': location,
-      'address': address,
-      'price_per_hour': pricePerHour.toString(),
-      'owner_phone': ownerPhone,
-      'facilities': facilities ?? '',
-      'rating': (rating ?? 0).toString(),
-      'description': description ?? '',
-      'maps_link': mapsLink ?? '',
-    });
+      if (response == null) {
+        return false;
+      }
 
-    if (image != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+      return response['success'] == true;
+    } catch (e) {
+      print('Error in addCourt: $e');
+      rethrow;
     }
-
-    final response = await http.Response.fromStream(await request.send());
-    _captureCookies(response);
-
-    if (response.statusCode != 200) {
-      throw Exception('Gagal menambahkan lapangan (${response.statusCode})');
-    }
-
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    return body['success'] == true;
   }
 
+  /// Edit existing court
   Future<bool> editCourt({
     required int courtId,
     required String name,
@@ -334,63 +259,53 @@ class CourtService {
     File? image,
     String? mapsLink,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      _uri('/court/api/court/$courtId/edit/'),
-    );
+    try {
+      final response = await request.postJson(
+        _buildUrl('/court/api/court/$courtId/edit/'),
+        jsonEncode({
+          'name': name,
+          'sport_type': sportType,
+          'location': location,
+          'address': address,
+          'price_per_hour': pricePerHour.toString(),
+          'owner_phone': ownerPhone,
+          'facilities': facilities ?? '',
+          'rating': (rating ?? 0).toString(),
+          'description': description ?? '',
+          'maps_link': mapsLink ?? '',
+        }),
+      );
 
-    request.headers.addAll(_headers(json: false));
-    request.fields.addAll({
-      'name': name,
-      'sport_type': sportType,
-      'location': location,
-      'address': address,
-      'price_per_hour': pricePerHour.toString(),
-      'owner_phone': ownerPhone,
-      'facilities': facilities ?? '',
-      'rating': (rating ?? 0).toString(),
-      'description': description ?? '',
-      'maps_link': mapsLink ?? '',
-    });
+      if (response == null) {
+        return false;
+      }
 
-    if (image != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+      return response['success'] == true;
+    } catch (e) {
+      print('Error in editCourt: $e');
+      rethrow;
     }
-
-    final response = await http.Response.fromStream(await request.send());
-    _captureCookies(response);
-
-    if (response.statusCode != 200) {
-      throw Exception('Gagal memperbarui lapangan (${response.statusCode})');
-    }
-
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    return body['success'] == true;
   }
 
+  /// Create a booking
   Future<bool> createBooking(int courtId, DateTime date) async {
-    _ensureCsrfToken();
+    try {
+      final response = await request.postJson(
+        _buildUrl('/court/api/court/bookings/'),
+        jsonEncode({
+          'court_id': courtId,
+          'date': CourtHelpers.formatDateForApi(date),
+        }),
+      );
 
-    final response = await _client.post(
-      _uri('/court/api/court/bookings/'),
-      headers: _headers(withCsrf: true),
-      body: jsonEncode({
-        'court_id': courtId,
-        'date': CourtHelpers.formatDateForApi(date),
-      }),
-    );
+      if (response == null) {
+        return false;
+      }
 
-    _captureCookies(response);
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to create booking (${response.statusCode})');
+      return response['success'] == true;
+    } catch (e) {
+      print('Error in createBooking: $e');
+      rethrow;
     }
-
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    return body['success'] == true;
-  }
-
-  void dispose() {
-    _client.close();
   }
 }
