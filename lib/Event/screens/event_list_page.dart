@@ -25,32 +25,28 @@ class _EventListPageState extends State<EventListPage> {
   bool _showFilters = false;
 
   Future<List<EventEntry>> fetchEvents(CookieRequest request) async {
-    final response = await request.get('$baseUrl/event/json/');
-    List<EventEntry> events = [];
-    for (var d in response) {
-      if (d != null) {
-        events.add(EventEntry.fromJson(d));
-      }
-    }
+    final uri = Uri.parse('$baseUrl/event/ajax/search/').replace(queryParameters: {
+      if (_selectedSport.isNotEmpty) 'sport': _selectedSport,
+      if (_availableOnly) 'available': 'true',
+      if (_searchQuery.isNotEmpty) 'search': _searchQuery,
+    });
 
-    if (_searchQuery.isNotEmpty) {
-      events = events.where((e) =>
-          e.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          e.city.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          e.description.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-    }
+    final response = await request.get(uri.toString());
 
-    if (_selectedSport.isNotEmpty) {
-      events = events.where((e) => e.sportType.toLowerCase() == _selectedSport.toLowerCase()).toList();
-    }
+    debugPrint('GET $uri');
+    debugPrint('event response type: ${response.runtimeType}');
+    debugPrint('event response: $response');
 
-    if (_selectedCity.isNotEmpty) {
-      events = events.where((e) => e.city == _selectedCity).toList();
-    }
+    final eventData = response is Map<String, dynamic>
+        ? (response['events'] as List<dynamic>? ?? [])
+        : response is List
+            ? response
+            : [];
 
-    if (_availableOnly) {
-      events = events.where((e) => e.status == 'available').toList();
-    }
+    final events = eventData
+        .whereType<Map<String, dynamic>>()
+        .map(EventEntry.fromJson)
+        .toList();
 
     return events;
   }
@@ -136,6 +132,28 @@ class _EventListPageState extends State<EventListPage> {
                   return const Center(child: CircularProgressIndicator(color: Color(0xFF84CC16)));
                 }
 
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Failed to load events\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () => setState(() {}),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 if (!snapshot.hasData || snapshot.data.isEmpty) {
                   return Center(
                     child: Column(
@@ -146,6 +164,17 @@ class _EventListPageState extends State<EventListPage> {
                         const Text(
                           'No events found',
                           style: TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        if (snapshot.data == null)
+                          const Text(
+                            'Response empty atau tidak terbaca.',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () => setState(() {}),
+                          child: const Text('Reload'),
                         ),
                       ],
                     ),

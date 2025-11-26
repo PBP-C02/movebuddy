@@ -4,6 +4,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Auth_Profile/screens/register_page.dart';
 import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
+import 'package:move_buddy/Sport_Partner/constants.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,10 +17,6 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-
-  // Ganti dengan URL Deployed atau Localhost kamu
-  // Jangan lupa hapus trailing slash jika di backend path-nya pakai slash
-  final String baseUrl = "http://127.0.0.1:8000"; 
 
   @override
   Widget build(BuildContext context) {
