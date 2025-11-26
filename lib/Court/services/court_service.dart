@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court.dart';
 import '../utils/court_helpers.dart';
@@ -215,11 +216,9 @@ class CourtService {
     String? mapsLink,
   }) async {
     try {
-      // Note: pbp_django_auth doesn't have built-in multipart support
-      // We'll use postJson for now without image
-      final response = await request.postJson(
-        _buildUrl('/court/api/court/add/'),
-        jsonEncode({
+      final resp = await _multipartCourtRequest(
+        path: '/court/api/court/add/',
+        fields: {
           'name': name,
           'sport_type': sportType,
           'location': location,
@@ -230,14 +229,10 @@ class CourtService {
           'rating': (rating ?? 0).toString(),
           'description': description ?? '',
           'maps_link': mapsLink ?? '',
-        }),
+        },
+        image: image,
       );
-
-      if (response == null) {
-        return false;
-      }
-
-      return response['success'] == true;
+      return resp['success'] == true;
     } catch (e) {
       print('Error in addCourt: $e');
       rethrow;
@@ -260,9 +255,9 @@ class CourtService {
     String? mapsLink,
   }) async {
     try {
-      final response = await request.postJson(
-        _buildUrl('/court/api/court/$courtId/edit/'),
-        jsonEncode({
+      final resp = await _multipartCourtRequest(
+        path: '/court/api/court/$courtId/edit/',
+        fields: {
           'name': name,
           'sport_type': sportType,
           'location': location,
@@ -273,14 +268,10 @@ class CourtService {
           'rating': (rating ?? 0).toString(),
           'description': description ?? '',
           'maps_link': mapsLink ?? '',
-        }),
+        },
+        image: image,
       );
-
-      if (response == null) {
-        return false;
-      }
-
-      return response['success'] == true;
+      return resp['success'] == true;
     } catch (e) {
       print('Error in editCourt: $e');
       rethrow;
@@ -307,5 +298,37 @@ class CourtService {
       print('Error in createBooking: $e');
       rethrow;
     }
+  }
+
+  Future<Map<String, dynamic>> _multipartCourtRequest({
+    required String path,
+    required Map<String, String> fields,
+    File? image,
+  }) async {
+    final uri = Uri.parse(_buildUrl(path));
+    final requestHeaders = <String, String>{};
+    final cookieHeader = request.headers['cookie'];
+    if (cookieHeader != null) {
+      requestHeaders[HttpHeaders.cookieHeader] = cookieHeader;
+    }
+
+    final multipartRequest = http.MultipartRequest('POST', uri)
+      ..headers.addAll(requestHeaders)
+      ..fields.addAll(fields);
+
+    if (image != null) {
+      multipartRequest.files.add(
+        await http.MultipartFile.fromPath('image', image.path),
+      );
+    }
+
+    final streamed = await multipartRequest.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed request (${response.statusCode}): ${response.body}',
+      );
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 }
