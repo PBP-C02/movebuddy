@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
-import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
 
-import 'court/screens/courts_list_screen.dart';
-import 'court/services/court_service.dart';
+// --- DAFTAR KONTAK (IMPORT) YANG HILANG SEBELUMNYA ---
+import 'package:move_buddy/Auth_Profile/screens/login_page.dart'; 
+import 'package:move_buddy/Auth_Profile/screens/homepage.dart'; // Kita akan buat file ini di Langkah 2
+// ------------------------------------------------------
 
 void main() {
-  const overrideBaseUrl = String.fromEnvironment('COURT_BASE_URL');
-  final courtService = CourtService(
-    baseUrl: overrideBaseUrl.isEmpty ? null : overrideBaseUrl,
-  );
-  runApp(MoveBuddyApp(courtService: courtService));
+  runApp(const MyApp());
 }
 
-class MoveBuddyApp extends StatelessWidget {
-  const MoveBuddyApp({super.key, required this.courtService});
-
-  final CourtService courtService;
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +24,10 @@ class MoveBuddyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Move Buddy',
         theme: ThemeData(
+          // Warna Lime sesuai request design html kamu
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF84CC16)),
           useMaterial3: true,
         ),
-        // UBAH DI SINI: Arahkan ke RootPage, bukan LoginPage/SportPartnerPage
         home: const RootPage(),
       ),
     );
@@ -48,7 +42,7 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
-  // Ganti dengan URL backend Anda
+  // Ganti URL sesuai environment (Localhost/Deploy)
   final String baseUrl = "http://127.0.0.1:8000"; 
 
   @override
@@ -59,21 +53,19 @@ class _RootPageState extends State<RootPage> {
 
   Future<void> checkSession() async {
     final request = context.read<CookieRequest>();
-    
     try {
-      // Tanya ke server: "Saya masih login gak?"
-      // Browser otomatis kirim cookie session lama di sini
-      final response = await request.get("$baseUrl/check-session/");
+      final response = await request.get("$baseUrl/auth/check-session/"); // Pastikan URL di urls.py backend benar
 
       if (mounted) {
         if (response['loggedIn'] == true) {
-          // Kalau masih login, langsung ke halaman utama
+          // Ambil nama user dari response backend buat ditampilkan di Home
+          String userName = response['user'] ?? "Buddy";
+          
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const SportPartnerPage()),
+            MaterialPageRoute(builder: (context) => HomePage(username: userName)),
           );
         } else {
-          // Kalau tidak, tendang ke login
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -81,7 +73,6 @@ class _RootPageState extends State<RootPage> {
         }
       }
     } catch (e) {
-      // Jika error koneksi, default ke login page
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -93,11 +84,8 @@ class _RootPageState extends State<RootPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Tampilkan loading saat sedang mengecek session
     return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }
