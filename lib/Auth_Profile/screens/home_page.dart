@@ -1,16 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
 import 'package:move_buddy/Court/screens/courts_list_screen.dart';
 import 'package:move_buddy/Event/screens/event_list_page.dart';
 import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
+import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final String baseUrl = "http://127.0.0.1:8000";
+
+  Future<void> _logout() async {
+    final request = context.read<CookieRequest>();
+    
+    try {
+      // Logout from backend
+      await request.postJson("$baseUrl/logout/", {});
+    } catch (e) {
+      // Ignore logout errors, just redirect
+    }
+    
+    if (mounted) {
+      // Clear all navigation stacks and go directly to LoginPage
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFECFCCB), // Lime-100-ish background
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF84CC16),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'MOVE BUDDY',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: const Text('Logout'),
+                  content: const Text('Apakah Anda yakin ingin keluar?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Batal'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              );
+              
+              if (confirm == true) {
+                _logout();
+              }
+            },
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
