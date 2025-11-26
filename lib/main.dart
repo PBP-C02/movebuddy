@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
+import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
 import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
 
 import 'court/screens/courts_list_screen.dart';
@@ -9,7 +10,9 @@ import 'court/services/court_service.dart';
 
 void main() {
   const overrideBaseUrl = String.fromEnvironment('COURT_BASE_URL');
+  final request = CookieRequest();
   final courtService = CourtService(
+    request: request,
     baseUrl: overrideBaseUrl.isEmpty ? null : overrideBaseUrl,
   );
   runApp(MoveBuddyApp(courtService: courtService));
@@ -70,7 +73,7 @@ class _RootPageState extends State<RootPage> {
           // Kalau masih login, langsung ke halaman utama
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const SportPartnerPage()),
+            MaterialPageRoute(builder: (context) => const HomePage()),
           );
         } else {
           // Kalau tidak, tendang ke login
