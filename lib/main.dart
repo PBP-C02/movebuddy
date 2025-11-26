@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
+<<<<<<< HEAD
+=======
+import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
+import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
+import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
+>>>>>>> 5754abf735301fd55bd55ebd40f702ad6e73cf12
 
 // --- DAFTAR KONTAK (IMPORT) YANG HILANG SEBELUMNYA ---
 import 'package:move_buddy/Auth_Profile/screens/login_page.dart'; 
@@ -8,7 +14,17 @@ import 'package:move_buddy/Auth_Profile/screens/homepage.dart'; // Kita akan bua
 // ------------------------------------------------------
 
 void main() {
+<<<<<<< HEAD
   runApp(const MyApp());
+=======
+  const overrideBaseUrl = String.fromEnvironment('COURT_BASE_URL');
+  final request = CookieRequest();
+  final courtService = CourtService(
+    request: request,
+    baseUrl: overrideBaseUrl.isEmpty ? null : overrideBaseUrl,
+  );
+  runApp(MoveBuddyApp(courtService: courtService));
+>>>>>>> 5754abf735301fd55bd55ebd40f702ad6e73cf12
 }
 
 class MyApp extends StatelessWidget {
@@ -63,7 +79,11 @@ class _RootPageState extends State<RootPage> {
           
           Navigator.pushReplacement(
             context,
+<<<<<<< HEAD
             MaterialPageRoute(builder: (context) => HomePage(username: userName)),
+=======
+            MaterialPageRoute(builder: (context) => const HomePage()),
+>>>>>>> 5754abf735301fd55bd55ebd40f702ad6e73cf12
           );
         } else {
           Navigator.pushReplacement(

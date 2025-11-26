@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Auth_Profile/screens/register_page.dart';
-import 'package:move_buddy/Auth_Profile/screens/homepage.dart';
-import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
+import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -146,11 +145,11 @@ class _LoginPageState extends State<LoginPage> {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text("Login Berhasil!")),
                                     );
-                                    // Pindah ke halaman utama (Sport Partner)
+                                    // Pindah ke halaman utama (Home Page)
                                     Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) => HomePage(username: response['username'],)),
+                                          builder: (context) => const HomePage()),
                                     );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
