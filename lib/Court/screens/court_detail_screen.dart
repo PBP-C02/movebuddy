@@ -3,6 +3,7 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/court.dart';
 import '../services/court_service.dart';
@@ -11,12 +12,10 @@ import 'edit_court_screen.dart';
 
 class CourtDetailScreen extends StatefulWidget {
   final int courtId;
-  final CourtService courtService;
 
   const CourtDetailScreen({
     super.key,
     required this.courtId,
-    required this.courtService,
   });
 
   @override
@@ -38,11 +37,15 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
   }
 
   Future<void> _loadCourtDetail() async {
+    await CourtHelpers.ensureLocaleData();
+
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
-      final court = await widget.courtService.getCourtDetail(widget.courtId);
-      final availability = await widget.courtService.getAvailability(
+      final courtService = context.read<CourtService>();
+      final court = await courtService.getCourtDetail(widget.courtId);
+      final availability = await courtService.getAvailability(
         widget.courtId,
         _selectedDate,
       );
@@ -73,7 +76,8 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
     setState(() => _isCheckingAvailability = true);
 
     try {
-      final availability = await widget.courtService.getAvailability(
+      final courtService = context.read<CourtService>();
+      final availability = await courtService.getAvailability(
         widget.courtId,
         _selectedDate,
       );
@@ -99,7 +103,8 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
 
   Future<void> _setAvailability(bool available) async {
     try {
-      final success = await widget.courtService.setAvailability(
+      final courtService = context.read<CourtService>();
+      final success = await courtService.setAvailability(
         widget.courtId,
         _selectedDate,
         available,
@@ -136,8 +141,9 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
 
   Future<void> _bookViaWhatsApp() async {
     try {
+      final courtService = context.read<CourtService>();
       final dateStr = CourtHelpers.formatDateForApi(_selectedDate);
-      final link = await widget.courtService.getWhatsAppLink(
+      final link = await courtService.getWhatsAppLink(
         widget.courtId,
         date: dateStr,
       );
@@ -160,10 +166,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
     final updated = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => EditCourtScreen(
-          court: _court!,
-          courtService: widget.courtService,
-        ),
+        builder: (_) => EditCourtScreen(court: _court!, courtService: context.read<CourtService>(),),
       ),
     );
     if (updated == true && mounted) {
@@ -196,12 +199,15 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
       ),
     );
 
+    if (!mounted) return;
+
     if (confirm == true) {
       try {
-        final success = await widget.courtService.deleteCourt(widget.courtId);
+        final courtService = context.read<CourtService>();
+        final success = await courtService.deleteCourt(widget.courtId);
 
         if (success && mounted) {
-          Navigator.pop(context);
+          Navigator.pop(context, true);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Lapangan berhasil dihapus')),
           );
@@ -227,6 +233,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
         appBar: AppBar(
           title: const Text('Detail Lapangan'),
           backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF0F172A),
         ),
         body: const Center(
           child: CircularProgressIndicator(
@@ -242,6 +249,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
         appBar: AppBar(
           title: const Text('Detail Lapangan'),
           backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF0F172A),
         ),
         body: const Center(child: Text('Court not found')),
       );

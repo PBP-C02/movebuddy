@@ -3,6 +3,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
 import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
+import 'package:move_buddy/Court/services/court_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,11 +14,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Provider(
-      create: (_) {
-        CookieRequest request = CookieRequest();
-        return request;
-      },
+    return MultiProvider(
+      providers: [
+        Provider<CookieRequest>(create: (_) => CookieRequest()),
+        ProxyProvider<CookieRequest, CourtService>(
+          update: (_, request, __) => CourtService(request: request),
+        ),
+      ],
       child: MaterialApp(
         title: 'Move Buddy',
         theme: ThemeData(

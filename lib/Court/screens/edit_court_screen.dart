@@ -3,6 +3,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 import '../models/court.dart';
 import '../services/court_service.dart';
 import '../utils/court_helpers.dart';
@@ -130,6 +132,21 @@ class _EditCourtScreenState extends State<EditCourtScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      final auth = context.read<CookieRequest>();
+      await auth.init();
+      if (!mounted) return;
+      final hasSession = auth.loggedIn || auth.cookies.isNotEmpty;
+      if (!hasSession) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Silakan login terlebih dahulu untuk memperbarui lapangan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final success = await widget.courtService.editCourt(
         courtId: widget.court.id,
         name: _nameController.text.trim(),

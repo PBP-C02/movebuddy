@@ -4,8 +4,17 @@ import 'dart:developer' as developer;
 import 'dart:math' as math;
 
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class CourtHelpers {
+  static Future<void>? _localeInit;
+
+  /// Ensure locale data is loaded for Indonesian date formatting
+  static Future<void> ensureLocaleData() {
+    _localeInit ??= initializeDateFormatting('id_ID', null);
+    return _localeInit!;
+  }
+
   /// Format price to Indonesian Rupiah format
   static String formatPrice(double price) {
     final formatter = NumberFormat.currency(

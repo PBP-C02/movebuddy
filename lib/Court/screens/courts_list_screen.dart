@@ -1,7 +1,6 @@
 // lib/Court/screens/courts_list_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import '../models/court.dart';
 import '../services/court_service.dart';
@@ -11,7 +10,7 @@ import 'court_detail_screen.dart';
 import 'add_court_screen.dart';
 
 class CourtsListScreen extends StatefulWidget {
-  const CourtsListScreen({Key? key}) : super(key: key);
+  const CourtsListScreen({super.key});
 
   @override
   State<CourtsListScreen> createState() => _CourtsListScreenState();
@@ -50,9 +49,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
     });
 
     try {
-      final request = context.read<CookieRequest>();
-      final courtService = CourtService(request: request);
-      
+      final courtService = context.read<CourtService>();
       final courts = await courtService.getAllCourts();
       
       if (mounted) {
@@ -63,7 +60,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
         });
       }
     } catch (e) {
-      print('Error loading courts: $e');
+      debugPrint('Error loading courts: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -113,7 +110,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
@@ -150,10 +147,10 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -161,8 +158,14 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
       ),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            color: const Color(0xFF64748B),
+            tooltip: 'Back',
+            onPressed: () => Navigator.pop(context),
+          ),
           const Text(
-            'MOVEBUDDY',
+            'COURTS',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -179,19 +182,13 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AddCourtScreen(courtService: context.read<CourtService>(),),
+                  builder: (context) => const AddCourtScreen(),
                 ),
               );
               if (result == true) {
                 _loadCourts();
               }
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            color: const Color(0xFF64748B),
-            tooltip: 'Logout',
-            onPressed: () => _showLogoutDialog(context),
           ),
         ],
       ),
@@ -203,11 +200,11 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 60,
             offset: const Offset(0, 24),
           ),
@@ -287,7 +284,8 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
 
           // Location dropdown
           DropdownButtonFormField<String>(
-            value: _selectedLocation.isEmpty ? null : _selectedLocation,
+            key: ValueKey(_selectedLocation),
+            initialValue: _selectedLocation.isEmpty ? null : _selectedLocation,
             decoration: InputDecoration(
               labelText: 'Lokasi',
               labelStyle: const TextStyle(
@@ -358,7 +356,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
               ),
@@ -431,7 +429,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFCBED98).withOpacity(0.3),
+                      color: const Color(0xFFCBED98).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -470,7 +468,6 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
                 MaterialPageRoute(
                   builder: (context) => CourtDetailScreen(
                     courtId: _filteredCourts[index].id,
-                    courtService: context.read<CourtService>(),
                   ),
                 ),
               );
@@ -576,38 +573,15 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _loadCourts,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFCBED98),
+                foregroundColor: const Color(0xFF1F2B15),
+              ),
               child: const Text('Coba Lagi'),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _showLogoutDialog(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      // TODO: Implement proper logout
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
   }
 }

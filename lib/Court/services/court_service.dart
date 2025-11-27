@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court.dart';
@@ -81,7 +82,7 @@ class CourtService {
           .map((json) => Court.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      print('Error in getAllCourts: $e');
+      debugPrint('Error in getAllCourts: $e');
       rethrow;
     }
   }
@@ -105,7 +106,7 @@ class CourtService {
 
       return Court.fromJson(courtJson);
     } catch (e) {
-      print('Error in getCourtDetail: $e');
+      debugPrint('Error in getCourtDetail: $e');
       rethrow;
     }
   }
@@ -124,7 +125,7 @@ class CourtService {
 
       return response as Map<String, dynamic>;
     } catch (e) {
-      print('Error in getAvailability: $e');
+      debugPrint('Error in getAvailability: $e');
       rethrow;
     }
   }
@@ -150,7 +151,7 @@ class CourtService {
 
       return response['success'] == true;
     } catch (e) {
-      print('Error in setAvailability: $e');
+      debugPrint('Error in setAvailability: $e');
       rethrow;
     }
   }
@@ -177,7 +178,7 @@ class CourtService {
 
       return response['whatsapp_link'] as String;
     } catch (e) {
-      print('Error in getWhatsAppLink: $e');
+      debugPrint('Error in getWhatsAppLink: $e');
       rethrow;
     }
   }
@@ -196,7 +197,7 @@ class CourtService {
 
       return response['success'] == true;
     } catch (e) {
-      print('Error in deleteCourt: $e');
+      debugPrint('Error in deleteCourt: $e');
       rethrow;
     }
   }
@@ -216,6 +217,12 @@ class CourtService {
     String? mapsLink,
   }) async {
     try {
+      await request.init();
+      // If cookies exist, trust session even if loggedIn flag isn't set.
+      if (!request.loggedIn && request.cookies.isNotEmpty) {
+        request.loggedIn = true;
+      }
+
       final resp = await _multipartCourtRequest(
         path: '/court/api/court/add/',
         fields: {
@@ -226,7 +233,7 @@ class CourtService {
           'price_per_hour': pricePerHour.toString(),
           'owner_phone': ownerPhone,
           'facilities': facilities ?? '',
-          'rating': (rating ?? 0).toString(),
+          'rating': rating != null ? rating.toString() : '',
           'description': description ?? '',
           'maps_link': mapsLink ?? '',
         },
@@ -234,7 +241,7 @@ class CourtService {
       );
       return resp['success'] == true;
     } catch (e) {
-      print('Error in addCourt: $e');
+      debugPrint('Error in addCourt: $e');
       rethrow;
     }
   }
@@ -255,6 +262,11 @@ class CourtService {
     String? mapsLink,
   }) async {
     try {
+      await request.init();
+      if (!request.loggedIn && request.cookies.isNotEmpty) {
+        request.loggedIn = true;
+      }
+
       final resp = await _multipartCourtRequest(
         path: '/court/api/court/$courtId/edit/',
         fields: {
@@ -265,7 +277,7 @@ class CourtService {
           'price_per_hour': pricePerHour.toString(),
           'owner_phone': ownerPhone,
           'facilities': facilities ?? '',
-          'rating': (rating ?? 0).toString(),
+          'rating': rating != null ? rating.toString() : '',
           'description': description ?? '',
           'maps_link': mapsLink ?? '',
         },
@@ -273,7 +285,7 @@ class CourtService {
       );
       return resp['success'] == true;
     } catch (e) {
-      print('Error in editCourt: $e');
+      debugPrint('Error in editCourt: $e');
       rethrow;
     }
   }
@@ -295,7 +307,7 @@ class CourtService {
 
       return response['success'] == true;
     } catch (e) {
-      print('Error in createBooking: $e');
+      debugPrint('Error in createBooking: $e');
       rethrow;
     }
   }
@@ -305,11 +317,24 @@ class CourtService {
     required Map<String, String> fields,
     File? image,
   }) async {
+    // Ensure auth cookies are loaded before sending raw multipart requests.
+    await request.init();
+
     final uri = Uri.parse(_buildUrl(path));
     final requestHeaders = <String, String>{};
     final cookieHeader = request.headers['cookie'];
     if (cookieHeader != null) {
       requestHeaders[HttpHeaders.cookieHeader] = cookieHeader;
+    }
+    requestHeaders['Referer'] = baseUrl;
+    final csrfToken = request.cookies['csrftoken']?.value ??
+        request.headers['X-CSRFToken'] ??
+        request.headers['csrftoken'] ??
+        request.headers['csrf'] ??
+        request.headers['x-csrftoken'];
+    if (csrfToken != null) {
+      requestHeaders['X-CSRFToken'] = csrfToken;
+      fields['csrfmiddlewaretoken'] = csrfToken;
     }
 
     final multipartRequest = http.MultipartRequest('POST', uri)

@@ -3,16 +3,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../services/court_service.dart';
 import '../utils/court_helpers.dart';
 
 class AddCourtScreen extends StatefulWidget {
-  final CourtService courtService;
-
-  const AddCourtScreen({
-    super.key,
-    required this.courtService,
-  });
+  const AddCourtScreen({super.key});
 
   @override
   State<AddCourtScreen> createState() => _AddCourtScreenState();
@@ -100,7 +97,23 @@ class _AddCourtScreenState extends State<AddCourtScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final success = await widget.courtService.addCourt(
+      final auth = context.read<CookieRequest>();
+      await auth.init();
+      if (!mounted) return;
+      final hasSession = auth.loggedIn || auth.cookies.isNotEmpty;
+      if (!hasSession) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Silakan login terlebih dahulu untuk menambahkan lapangan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final courtService = context.read<CourtService>();
+      final success = await courtService.addCourt(
         name: _nameController.text.trim(),
         sportType: _selectedSport,
         location: _locationController.text.trim(),
@@ -126,7 +139,7 @@ class _AddCourtScreenState extends State<AddCourtScreen> {
               backgroundColor: Color(0xFF10B981),
             ),
           );
-          Navigator.pop(context, true); // Return true to refresh list
+          Navigator.pop(context, true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -156,6 +169,7 @@ class _AddCourtScreenState extends State<AddCourtScreen> {
       appBar: AppBar(
         title: const Text('TAMBAH LAPANGAN'),
         backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF0F172A),
         elevation: 0,
         centerTitle: true,
       ),
@@ -410,6 +424,7 @@ class _AddCourtScreenState extends State<AddCourtScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
+          key: ValueKey(_selectedSport),
           initialValue: _selectedSport,
           decoration: InputDecoration(
             filled: true,
@@ -446,9 +461,11 @@ class _AddCourtScreenState extends State<AddCourtScreen> {
             );
           }).toList(),
           onChanged: (value) {
-            setState(() {
-              _selectedSport = value!;
-            });
+            if (value != null) {
+              setState(() {
+                _selectedSport = value;
+              });
+            }
           },
         ),
       ],
