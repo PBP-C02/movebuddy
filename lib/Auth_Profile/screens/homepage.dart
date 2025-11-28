@@ -134,7 +134,7 @@ class HomePage extends StatelessWidget {
                         // NAVIGASI KE COURT
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const CourtsListScreen()),
+                          MaterialPageRoute(builder: (context) => const CourtListScreen()),
                         );
                       },
                     ),
