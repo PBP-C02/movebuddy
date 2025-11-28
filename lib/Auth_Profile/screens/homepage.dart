@@ -6,7 +6,7 @@ import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
 // --- IMPORT HALAMAN FITUR (Pastikan path ini sesuai folder kamu) ---
 import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
 import 'package:move_buddy/Event/screens/event_list_page.dart';
-import 'package:move_buddy/Court/screens/courts_list_screen.dart';
+import 'package:move_buddy/Court/screens/court_list_screen.dart';
 import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
 
 class HomePage extends StatelessWidget {
