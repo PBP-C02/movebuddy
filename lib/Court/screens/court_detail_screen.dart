@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+
 import '../models/court_models.dart';
 import '../helpers/court_api_helper.dart';
-import 'court_booking_screen.dart'; // Pastikan file ini ada (dari jawaban sebelumnya)
+import 'court_booking_screen.dart';
 import 'court_form_screen.dart';
 
 class CourtDetailScreen extends StatefulWidget {
@@ -14,41 +17,44 @@ class CourtDetailScreen extends StatefulWidget {
 }
 
 class _CourtDetailScreenState extends State<CourtDetailScreen> {
-  final CourtApiHelper _api = CourtApiHelper();
   late Future<CourtDetail> _detailFuture;
   
   // State Cek Jadwal
   DateTime _selectedDate = DateTime.now();
   bool? _isDateAvailable;
   bool _checkingSchedule = false;
+  bool _isInit = true;
 
   @override
-  void initState() {
-    super.initState();
-    _refreshDetail();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      final request = context.read<CookieRequest>();
+      _refreshDetail(request);
+      _isInit = false;
+    }
   }
 
-  void _refreshDetail() {
+  void _refreshDetail(CookieRequest request) {
     setState(() {
-      _detailFuture = _fetchDetail();
+      _detailFuture = CourtApiHelper(request).fetchCourtDetail(widget.courtId);
     });
-    // Reset status jadwal
-    _isDateAvailable = null;
-    _checkAvailability(); // Cek default hari ini
-  }
-
-  Future<CourtDetail> _fetchDetail() async {
-    final data = await _api.fetchCourtDetail(widget.courtId);
-    return CourtDetail.fromJson(data);
+    // Reset status jadwal & Cek default hari ini
+    setState(() {
+       _isDateAvailable = null;
+    });
+    _checkAvailability(request); 
   }
 
   // Cek ketersediaan tanggal
-  Future<void> _checkAvailability() async {
+  Future<void> _checkAvailability(CookieRequest request) async {
+    if (!mounted) return;
+    
     setState(() => _checkingSchedule = true);
     String formattedDate = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2,'0')}-${_selectedDate.day.toString().padLeft(2,'0')}";
     
     try {
-      bool available = await _api.checkAvailability(widget.courtId, formattedDate);
+      bool available = await CourtApiHelper(request).checkAvailability(widget.courtId, formattedDate);
       if (mounted) {
         setState(() => _isDateAvailable = available);
       }
@@ -64,6 +70,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
   }
 
   Future<void> _pickDate(BuildContext context) async {
+    final request = context.read<CookieRequest>();
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -75,12 +82,11 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
         _selectedDate = picked;
         _isDateAvailable = null;
       });
-      _checkAvailability();
+      _checkAvailability(request);
     }
   }
 
-  // Aksi Hapus
-  Future<void> _deleteCourt() async {
+  Future<void> _deleteCourt(CookieRequest request) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -98,7 +104,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
 
     if (confirm == true) {
       try {
-        await _api.deleteCourt(widget.courtId);
+        await CourtApiHelper(request).deleteCourt(widget.courtId);
         if (mounted) {
           Navigator.pop(context); // Keluar dari detail
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lapangan dihapus")));
@@ -113,11 +119,13 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Detail Lapangan"),
         actions: [
-          // Tombol Edit/Delete muncul hanya jika user adalah pemilik
+          // FutureBuilder untuk akses edit/delete
           FutureBuilder<CourtDetail>(
             future: _detailFuture,
             builder: (context, snapshot) {
@@ -131,13 +139,14 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                           builder: (_) => CourtFormScreen(court: snapshot.data!.basicInfo),
                         ),
                       );
-                      // Jika sukses edit, refresh detail
                       if (result == true) {
-                        _refreshDetail();
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data berhasil diperbarui")));
+                        _refreshDetail(request);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data berhasil diperbarui")));
+                        }
                       }
                     } else if (value == 'delete') {
-                      _deleteCourt();
+                      _deleteCourt(request);
                     }
                   },
                   itemBuilder: (context) => [
@@ -158,6 +167,8 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
+          } else if (!snapshot.hasData) {
+             return const Center(child: Text("Data tidak ditemukan"));
           }
 
           final detail = snapshot.data!;
@@ -179,7 +190,12 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                         height: 250,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => Container(height: 250, color: Colors.grey[300], child: const Icon(Icons.broken_image)),
+                        errorBuilder: (ctx, err, stack) => Container(
+                          height: 250, 
+                          width: double.infinity,
+                          color: Colors.grey[300], 
+                          child: const Icon(Icons.broken_image, size: 50)
+                        ),
                       ),
                       
                       Padding(
@@ -260,11 +276,11 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: _isDateAvailable == true ? Colors.green : Colors.red,
+                                      color: _isDateAvailable == true ? Colors.green : (_isDateAvailable == false ? Colors.red : Colors.grey),
                                       borderRadius: BorderRadius.circular(20)
                                     ),
                                     child: Text(
-                                      _isDateAvailable == true ? "Tersedia" : "Penuh",
+                                      _isDateAvailable == true ? "Tersedia" : (_isDateAvailable == false ? "Penuh" : "Cek Jadwal"),
                                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                     ),
                                   ),
@@ -282,7 +298,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 width: double.infinity,
-                decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))]),
+                decoration: const BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))]),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue, 

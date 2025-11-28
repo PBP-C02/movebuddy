@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../helpers/court_api_helper.dart';
 
 class CourtBookingScreen extends StatefulWidget {
@@ -12,123 +14,125 @@ class CourtBookingScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _CourtBookingScreenState createState() => _CourtBookingScreenState();
+  State<CourtBookingScreen> createState() => _CourtBookingScreenState();
 }
 
 class _CourtBookingScreenState extends State<CourtBookingScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final CourtApiHelper _api = CourtApiHelper();
   bool _isLoading = false;
 
   Future<void> _submitBooking() async {
-    if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-    
-    // Format YYYY-MM-DD
-    String dateStr = "${widget.preSelectedDate.year}-${widget.preSelectedDate.month.toString().padLeft(2,'0')}-${widget.preSelectedDate.day.toString().padLeft(2,'0')}";
+
+    // 1. Ambil CookieRequest dari Provider
+    final request = context.read<CookieRequest>();
+    final api = CourtApiHelper(request);
+
+    // Format tanggal: YYYY-MM-DD
+    final dateStr = "${widget.preSelectedDate.year}-${widget.preSelectedDate.month.toString().padLeft(2, '0')}-${widget.preSelectedDate.day.toString().padLeft(2, '0')}";
 
     try {
-      final response = await _api.createBooking(widget.courtId, dateStr);
-      
-      if (!mounted) return;
-      
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text("Sukses"),
-          content: Text("Booking berhasil untuk tanggal $dateStr.\n${response['message']}"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Tutup dialog
-                Navigator.pop(context); // Kembali ke detail
-                Navigator.pop(context); // Kembali ke list (opsional)
-              },
-              child: const Text("OK"),
-            )
-          ],
-        ),
-      );
+      final response = await api.createBooking(widget.courtId, dateStr);
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        // Tampilkan pesan sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Booking Berhasil! ID: ${response['booking_id'] ?? '-'}"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Kembali ke halaman list (pop 2x: dari booking -> detail -> list)
+        // Atau pop sekali ke detail
+        Navigator.pop(context); 
+        Navigator.pop(context); 
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Gagal Booking: $e"),
-        backgroundColor: Colors.red,
-      ));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // Tampilkan pesan error (misal: saldo kurang, atau sudah dibooking orang lain)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal Booking: ${e.toString().replaceAll('Exception:', '')}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Format tampilan tanggal
+    final displayDate = "${widget.preSelectedDate.day}/${widget.preSelectedDate.month}/${widget.preSelectedDate.year}";
+
     return Scaffold(
       appBar: AppBar(title: const Text("Konfirmasi Booking")),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Detail Pemesanan", 
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Detail Pesanan",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            
+            // Info Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade100),
               ),
-              const SizedBox(height: 20),
-              TextFormField(
-                initialValue: "${widget.preSelectedDate.toLocal()}".split(' ')[0],
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: "Tanggal Booking",
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.calendar_today),
+              child: Column(
+                children: [
+                  _rowInfo("Tanggal", displayDate),
+                  const Divider(),
+                  _rowInfo("Status", "Siap di-booking"),
+                  // Tambahkan info harga jika data tersedia (bisa dipassing lewat constructor)
+                ],
+              ),
+            ),
+
+            const Spacer(),
+            
+            // Tombol Confirm
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _submitBooking,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "KONFIRMASI BOOKING",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
               ),
-              const SizedBox(height: 10),
-              // Backend create_booking mengabaikan waktu, jadi kita beri info saja.
-              const AlertBox(text: "Booking berlaku untuk satu hari penuh (Full Day)."),
-              
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitBooking,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue,
-                  ),
-                  child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : const Text("Konfirmasi Booking", style: TextStyle(color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
 
-class AlertBox extends StatelessWidget {
-  final String text;
-  const AlertBox({required this.text});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.orange[50],
-        border: Border.all(color: Colors.orange),
-        borderRadius: BorderRadius.circular(8),
-      ),
+  Widget _rowInfo(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.info_outline, color: Colors.orange),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text)),
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         ],
       ),
     );

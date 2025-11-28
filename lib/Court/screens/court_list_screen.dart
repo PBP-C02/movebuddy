@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+
 import '../models/court_models.dart';
 import '../helpers/court_api_helper.dart';
-import '../widgets/court_card.dart'; // Pastikan widget ini ada (dari jawaban sebelumnya)
+import '../widgets/court_card.dart';
 import 'court_detail_screen.dart';
 import 'court_form_screen.dart';
 
@@ -13,38 +17,57 @@ class CourtListScreen extends StatefulWidget {
 }
 
 class _CourtListScreenState extends State<CourtListScreen> {
-  final CourtApiHelper _api = CourtApiHelper();
-  
   // State Filter & Search
   String _searchQuery = "";
   String _selectedSport = "";
+  Timer? _debounce;
   
   final List<String> _sportTypes = [
     '', 'tennis', 'basketball', 'soccer', 'badminton', 
     'volleyball', 'paddle', 'futsal', 'table_tennis'
   ];
 
-  // Future untuk fetch data
   late Future<List<Court>> _courtsFuture;
+  bool _isInit = true; // Flag untuk inisialisasi pertama kali
 
   @override
-  void initState() {
-    super.initState();
-    _refreshData();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      // Ambil request sekali saat widget pertama kali dimuat
+      final request = context.read<CookieRequest>();
+      _refreshData(request);
+      _isInit = false;
+    }
   }
 
-  void _refreshData() {
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _refreshData(CookieRequest request) {
     setState(() {
-      _courtsFuture = _fetchData();
+      _courtsFuture = CourtApiHelper(request).fetchCourts(
+        query: _searchQuery,
+        sport: _selectedSport,
+      );
     });
   }
 
-  Future<List<Court>> _fetchData() async {
-    final List<dynamic> rawData = await _api.fetchCourts(
-      query: _searchQuery,
-      sport: _selectedSport,
-    );
-    return rawData.map((json) => Court.fromJson(json)).toList();
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = query;
+        });
+        // Ambil request terbaru dari context saat search dieksekusi
+        final request = context.read<CookieRequest>();
+        _refreshData(request);
+      }
+    });
   }
 
   void _navigateToAddCourt() async {
@@ -52,21 +75,22 @@ class _CourtListScreenState extends State<CourtListScreen> {
       context,
       MaterialPageRoute(builder: (context) => const CourtFormScreen()),
     );
-    // Jika result true (berhasil add), refresh list
-    if (result == true) {
-      _refreshData();
+    if (result == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Lapangan berhasil ditambahkan!")),
       );
+      _refreshData(context.read<CookieRequest>());
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Kita tetap watch request untuk jaga-jaga jika status auth berubah
+    final request = context.watch<CookieRequest>();
+
     return Scaffold(
       appBar: AppBar(title: const Text("Daftar Lapangan")),
       
-      // Floating Action Button untuk Add Court
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddCourt,
         backgroundColor: Colors.blue,
@@ -88,10 +112,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 10),
                   ),
-                  onChanged: (val) {
-                    _searchQuery = val;
-                    _refreshData(); // Live search
-                  },
+                  onChanged: _onSearchChanged,
                 ),
                 const SizedBox(height: 8),
                 SingleChildScrollView(
@@ -101,7 +122,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
                       const Text("Filter: ", style: TextStyle(fontWeight: FontWeight.bold)),
                       DropdownButton<String>(
                         value: _selectedSport,
-                        underline: Container(), // Hapus garis bawah default
+                        underline: Container(), 
                         items: _sportTypes.map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
@@ -109,9 +130,11 @@ class _CourtListScreenState extends State<CourtListScreen> {
                           );
                         }).toList(),
                         onChanged: (newVal) {
-                          if (newVal != null) {
-                            _selectedSport = newVal;
-                            _refreshData();
+                          if (newVal != null && newVal != _selectedSport) {
+                            setState(() {
+                              _selectedSport = newVal;
+                            });
+                            _refreshData(request);
                           }
                         },
                       ),
@@ -130,7 +153,21 @@ class _CourtListScreenState extends State<CourtListScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  return Center(child: Text("Gagal memuat: ${snapshot.error}"));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, color: Colors.red, size: 40),
+                        const SizedBox(height: 8),
+                        Text("Terjadi kesalahan: ${snapshot.error}", textAlign: TextAlign.center),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () => _refreshData(request),
+                          child: const Text("Coba Lagi"),
+                        )
+                      ],
+                    ),
+                  );
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(child: Text("Tidak ada lapangan ditemukan."));
                 }
@@ -142,15 +179,14 @@ class _CourtListScreenState extends State<CourtListScreen> {
                     return CourtCard(
                       court: courts[index],
                       onTap: () async {
-                        // Navigasi ke Detail
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => CourtDetailScreen(courtId: courts[index].id),
                           ),
                         );
-                        // Refresh saat kembali (siapa tahu ada perubahan)
-                        _refreshData();
+                        // Refresh data saat kembali dari detail
+                        if (mounted) _refreshData(request);
                       },
                     );
                   },
