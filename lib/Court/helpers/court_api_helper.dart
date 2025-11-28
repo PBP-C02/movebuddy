@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court_models.dart';
 
@@ -7,7 +9,7 @@ class CourtApiHelper {
 
   // Gunakan 10.0.2.2 untuk Emulator Android
   // Gunakan IP Laptop (misal 192.168.x.x) untuk HP Fisik
-  static const String baseUrl = "http://10.0.2.2:8000";
+  static const String baseUrl = "http://127.0.0.1:8000";
 
   CourtApiHelper(this.request);
 
@@ -84,6 +86,57 @@ class CourtApiHelper {
 
   // --- POST DATA (Booking & CRUD) ---
 
+  Future<String?> generateWhatsappLink(int courtId, {String? dateStr, String? timeStr}) async {
+    try {
+      final response = await request.postJson(
+        _buildUrl('/court/api/court/whatsapp/'),
+        jsonEncode({
+          "court_id": courtId,
+          "date": dateStr,
+          "time": timeStr,
+        }),
+      );
+
+      if (response is Map && response['success'] == true) {
+        return response['whatsapp_link'] ?? response['link'];
+      }
+    } catch (e) {
+      // ignore and return null so caller can fallback
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>> _postMultipart(
+    String path,
+    Map<String, String> fields, {
+    File? imageFile,
+  }) async {
+    await request.init();
+
+    final uri = Uri.parse(_buildUrl(path));
+    final multipart = http.MultipartRequest('POST', uri);
+    multipart.fields.addAll(fields);
+
+    if (imageFile != null) {
+      multipart.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+    }
+
+    // Copy existing headers (including cookies) to keep session
+    multipart.headers.addAll(Map<String, String>.from(request.headers));
+
+    final streamed = await multipart.send();
+    final resp = await http.Response.fromStream(streamed);
+    try {
+      final data = json.decode(resp.body);
+      if (data is Map<String, dynamic>) {
+        return data;
+      }
+    } catch (_) {
+      // fallthrough to default map below
+    }
+    return {"success": false, "error": "Invalid response"};
+  }
+
   Future<Map<String, dynamic>> createBooking(int courtId, String dateStr) async {
     try {
       final response = await request.postJson(
@@ -104,29 +157,22 @@ class CourtApiHelper {
     }
   }
   
-  Future<bool> addCourt(Map<String, String> fields) async {
+  Future<bool> addCourt(Map<String, String> fields, {File? imageFile}) async {
     try {
-      // Menggunakan postJson untuk kestabilan dengan pbp_django_auth
-      final response = await request.postJson(
-        _buildUrl('/court/api/court/add/'),
-        jsonEncode(fields),
-      );
+      final response = await _postMultipart('/court/api/court/add/', fields, imageFile: imageFile);
 
-      return response['success'] == true;
+      return response is Map && response['success'] == true;
     } catch (e) {
       print("Error Add Court: $e");
       return false;
     }
   }
 
-  Future<bool> editCourt(int id, Map<String, String> fields) async {
+  Future<bool> editCourt(int id, Map<String, String> fields, {File? imageFile}) async {
     try {
-      final response = await request.postJson(
-        _buildUrl('/court/api/court/$id/edit/'),
-        jsonEncode(fields),
-      );
+      final response = await _postMultipart('/court/api/court/$id/edit/', fields, imageFile: imageFile);
 
-      return response['success'] == true;
+      return response is Map && response['success'] == true;
     } catch (e) {
        print("Error Edit Court: $e");
        return false;

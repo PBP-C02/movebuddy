@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../helpers/court_api_helper.dart';
 
 class CourtBookingScreen extends StatefulWidget {
@@ -20,6 +21,18 @@ class CourtBookingScreen extends StatefulWidget {
 class _CourtBookingScreenState extends State<CourtBookingScreen> {
   bool _isLoading = false;
 
+  Future<void> _openWhatsapp(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tidak bisa membuka WhatsApp di perangkat ini")),
+      );
+    }
+  }
+
   Future<void> _submitBooking() async {
     setState(() => _isLoading = true);
 
@@ -32,6 +45,7 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
 
     try {
       final response = await api.createBooking(widget.courtId, dateStr);
+      final waLink = await api.generateWhatsappLink(widget.courtId, dateStr: dateStr);
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -39,10 +53,14 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
         // Tampilkan pesan sukses
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Booking Berhasil! ID: ${response['booking_id'] ?? '-'}"),
+            content: Text("Booking Berhasil! ${response['message'] ?? ''}"),
             backgroundColor: Colors.green,
           ),
         );
+
+        if (waLink != null) {
+          await _openWhatsapp(waLink);
+        }
 
         // Kembali ke halaman list (pop 2x: dari booking -> detail -> list)
         // Atau pop sekali ke detail

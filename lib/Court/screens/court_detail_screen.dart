@@ -57,6 +57,11 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
       bool available = await CourtApiHelper(request).checkAvailability(widget.courtId, formattedDate);
       if (mounted) {
         setState(() => _isDateAvailable = available);
+        if (!available) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Tanggal ini sudah dibooking, pilih tanggal lain.")),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
