@@ -10,6 +10,7 @@ class Court {
   final String facilities;
   final bool isAvailableToday;
   final bool ownedByUser; // Field penting untuk hak akses edit/delete
+  final double? distanceKm;
 
   Court({
     required this.id,
@@ -23,6 +24,7 @@ class Court {
     required this.facilities,
     required this.isAvailableToday,
     required this.ownedByUser,
+    this.distanceKm,
   });
 
   factory Court.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class Court {
       facilities: json['facilities'] ?? "",
       isAvailableToday: json['is_available'] ?? false,
       ownedByUser: json['owned_by_user'] ?? false,
+      distanceKm: json['distance_km'] != null ? double.tryParse(json['distance_km'].toString()) : null,
     );
   }
 }

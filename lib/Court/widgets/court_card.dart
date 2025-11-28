@@ -59,11 +59,24 @@ class CourtCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text("Rp ${court.price}/jam", style: const TextStyle(color: Colors.green)),
                   const SizedBox(height: 4),
-                  Text(
-                    court.location, 
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    maxLines: 1, 
-                    overflow: TextOverflow.ellipsis
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          court.location,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (court.distanceKm != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          "${court.distanceKm} km",
+                          style: const TextStyle(color: Colors.blueGrey, fontSize: 11),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),

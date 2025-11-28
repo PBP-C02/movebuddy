@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
-import 'package:image_picker/image_picker.dart';
 import '../models/court_models.dart';
 import '../helpers/court_api_helper.dart';
 
@@ -39,7 +37,7 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
   final _phoneController = TextEditingController();
   final _facilitiesController = TextEditingController();
   final _descController = TextEditingController();
-  XFile? _imageFile;
+  final _imageUrlController = TextEditingController();
 
   @override
   void initState() {
@@ -54,6 +52,7 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
       _priceController.text = c.price.toInt().toString();
       _phoneController.text = ""; // Note: BasicInfo Court mungkin tidak menyimpan phone, sesuaikan jika ada
       _facilitiesController.text = c.facilities;
+      _imageUrlController.text = c.imageUrl ?? "";
       // Description ada di Detail, bukan BasicInfo. 
       // Jika model Court kamu punya desc, masukkan di sini.
     } else {
@@ -75,21 +74,12 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
     _phoneController.dispose();
     _facilitiesController.dispose();
     _descController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
   String _sanitizePhone(String value) {
     return value.replaceAll(RegExp(r'[^0-9]'), '');
-  }
-
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
-    if (picked != null) {
-      setState(() {
-        _imageFile = picked;
-      });
-    }
   }
 
   Future<void> _saveForm() async {
@@ -115,19 +105,19 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
       'facilities': _facilitiesController.text.trim(),
       'description': _descController.text.trim(),
       'rating': '0',
+      'image_url': _imageUrlController.text.trim(),
     };
 
     bool success;
     final api = CourtApiHelper(request); // Inject request
-    final imageFile = _imageFile != null ? File(_imageFile!.path) : null;
 
     try {
       if (widget.court == null) {
         // Mode Add
-        success = await api.addCourt(fields, imageFile: imageFile);
+        success = await api.addCourt(fields);
       } else {
         // Mode Edit
-        success = await api.editCourt(widget.court!.id, fields, imageFile: imageFile);
+        success = await api.editCourt(widget.court!.id, fields);
       }
 
       if (mounted) {
@@ -185,26 +175,14 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
               validator: (v) => (v == null || v.isEmpty) ? "Pilih jenis olahraga" : null,
             ),
             const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _pickImage,
-                    icon: const Icon(Icons.image_outlined),
-                    label: Text(_imageFile == null ? "Pilih Gambar" : "Ganti Gambar"),
-                  ),
-                ),
-                if (_imageFile != null) ...[
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: Text(
-                      _imageFile!.path.split(Platform.pathSeparator).last,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ],
+            TextFormField(
+              controller: _imageUrlController,
+              decoration: const InputDecoration(
+                labelText: "Link Gambar (opsional)",
+                border: OutlineInputBorder(),
+                hintText: "https://contoh.com/gambar.jpg",
+              ),
+              keyboardType: TextInputType.url,
             ),
             const SizedBox(height: 12),
 

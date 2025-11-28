@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court_models.dart';
 
@@ -19,13 +17,29 @@ class CourtApiHelper {
 
   // --- GET DATA ---
 
-  Future<List<Court>> fetchCourts({String query = "", String sport = "", String location = ""}) async {
+  Future<List<Court>> fetchCourts({
+    String query = "",
+    String sport = "",
+    String location = "",
+    String sort = "",
+    String minPrice = "",
+    String maxPrice = "",
+    String minRating = "",
+    String latitude = "",
+    String longitude = "",
+  }) async {
     try {
       // Menyusun Query Parameters
       final params = <String, String>{};
       if (query.isNotEmpty) params['q'] = query;
       if (sport.isNotEmpty) params['sport'] = sport;
       if (location.isNotEmpty) params['location'] = location;
+      if (sort.isNotEmpty) params['sort'] = sort;
+      if (minPrice.isNotEmpty) params['min_price'] = minPrice;
+      if (maxPrice.isNotEmpty) params['max_price'] = maxPrice;
+      if (minRating.isNotEmpty) params['min_rating'] = minRating;
+      if (latitude.isNotEmpty) params['lat'] = latitude;
+      if (longitude.isNotEmpty) params['lng'] = longitude;
       
       String queryString = "";
       if (params.isNotEmpty) {
@@ -87,54 +101,24 @@ class CourtApiHelper {
   // --- POST DATA (Booking & CRUD) ---
 
   Future<String?> generateWhatsappLink(int courtId, {String? dateStr, String? timeStr}) async {
-    try {
-      final response = await request.postJson(
-        _buildUrl('/court/api/court/whatsapp/'),
-        jsonEncode({
-          "court_id": courtId,
-          "date": dateStr,
-          "time": timeStr,
-        }),
-      );
+    final payload = jsonEncode({
+      "court_id": courtId,
+      "date": dateStr,
+      "time": timeStr,
+    });
 
-      if (response is Map && response['success'] == true) {
-        return response['whatsapp_link'] ?? response['link'];
+    // Coba endpoint csrf-exempt lebih dulu
+    for (final path in ['/court/api/court/whatsapp/link/', '/court/api/court/whatsapp/']) {
+      try {
+        final response = await request.postJson(_buildUrl(path), payload);
+        if (response is Map && response['success'] == true) {
+          return response['whatsapp_link'] ?? response['link'];
+        }
+      } catch (e) {
+        // lanjut coba endpoint lain
       }
-    } catch (e) {
-      // ignore and return null so caller can fallback
     }
     return null;
-  }
-
-  Future<Map<String, dynamic>> _postMultipart(
-    String path,
-    Map<String, String> fields, {
-    File? imageFile,
-  }) async {
-    await request.init();
-
-    final uri = Uri.parse(_buildUrl(path));
-    final multipart = http.MultipartRequest('POST', uri);
-    multipart.fields.addAll(fields);
-
-    if (imageFile != null) {
-      multipart.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
-    }
-
-    // Copy existing headers (including cookies) to keep session
-    multipart.headers.addAll(Map<String, String>.from(request.headers));
-
-    final streamed = await multipart.send();
-    final resp = await http.Response.fromStream(streamed);
-    try {
-      final data = json.decode(resp.body);
-      if (data is Map<String, dynamic>) {
-        return data;
-      }
-    } catch (_) {
-      // fallthrough to default map below
-    }
-    return {"success": false, "error": "Invalid response"};
   }
 
   Future<Map<String, dynamic>> createBooking(int courtId, String dateStr) async {
@@ -157,9 +141,12 @@ class CourtApiHelper {
     }
   }
   
-  Future<bool> addCourt(Map<String, String> fields, {File? imageFile}) async {
+  Future<bool> addCourt(Map<String, String> fields) async {
     try {
-      final response = await _postMultipart('/court/api/court/add/', fields, imageFile: imageFile);
+      final response = await request.post(
+        _buildUrl('/court/api/court/add/'),
+        fields,
+      );
 
       return response is Map && response['success'] == true;
     } catch (e) {
@@ -168,9 +155,12 @@ class CourtApiHelper {
     }
   }
 
-  Future<bool> editCourt(int id, Map<String, String> fields, {File? imageFile}) async {
+  Future<bool> editCourt(int id, Map<String, String> fields) async {
     try {
-      final response = await _postMultipart('/court/api/court/$id/edit/', fields, imageFile: imageFile);
+      final response = await request.post(
+        _buildUrl('/court/api/court/$id/edit/'),
+        fields,
+      );
 
       return response is Map && response['success'] == true;
     } catch (e) {
