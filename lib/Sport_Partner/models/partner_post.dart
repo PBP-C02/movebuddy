@@ -17,7 +17,7 @@ class PartnerPost {
     String lokasi;
     int totalParticipants;
     bool isParticipant;
-    bool isCreator;
+    bool isCreator; // Field baru
 
     PartnerPost({
         required this.postId,
@@ -36,19 +36,20 @@ class PartnerPost {
     });
 
     factory PartnerPost.fromJson(Map<String, dynamic> json) => PartnerPost(
-        postId: json["post_id"],
+        postId: json["post_id"]?.toString() ?? "",
         creatorName: json["creator_name"] ?? "Unknown",
-        creatorId: json["creator_id"].toString(),
-        title: json["title"],
-        description: json["description"],
-        category: json["category"],
-        tanggal: DateTime.parse(json["tanggal"]),
-        jamMulai: json["jam_mulai"],
-        jamSelesai: json["jam_selesai"],
-        lokasi: json["lokasi"],
+        creatorId: json["creator_id"]?.toString() ?? "0",
+        title: json["title"] ?? "No Title",
+        description: json["description"] ?? "-",
+        category: json["category"] ?? "General",
+        // Handle tanggal error
+        tanggal: json["tanggal"] != null ? DateTime.parse(json["tanggal"]) : DateTime.now(),
+        jamMulai: json["jam_mulai"] ?? "00:00",
+        jamSelesai: json["jam_selesai"] ?? "00:00",
+        lokasi: json["lokasi"] ?? "-",
         totalParticipants: json["total_participants"] ?? 0,
-        isParticipant: json["is_participant"] ?? false,
-        isCreator: json["is_creator"] ?? false,
+        isParticipant: json["is_participant"] == true,
+        isCreator: json["is_creator"] == true, // Parse boolean aman
     );
 
     Map<String, dynamic> toJson() => {
