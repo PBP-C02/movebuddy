@@ -11,6 +11,27 @@ class CourtApiHelper {
 
   CourtApiHelper(this.request);
 
+  /// Build a usable image URL from API value (handles absolute/relative/empty).
+  static String resolveImageUrl(
+    String? rawUrl, {
+    String placeholder = "https://via.placeholder.com/150",
+  }) {
+    if (rawUrl == null) return placeholder;
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) return placeholder;
+
+    final lower = trimmed.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      return trimmed;
+    }
+
+    // Assume relative path from Django (eg: /media/xxx.jpg or media/xxx.jpg)
+    if (trimmed.startsWith('/')) {
+      return '$baseUrl$trimmed';
+    }
+    return '$baseUrl/$trimmed';
+  }
+
   String _buildUrl(String path) {
     return '$baseUrl$path';
   }

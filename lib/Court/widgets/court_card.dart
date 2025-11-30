@@ -10,10 +10,10 @@ class CourtCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Handle image URL absolute
-    String imageUrl = court.imageUrl != null 
-        ? "${CourtApiHelper.baseUrl}${court.imageUrl}" 
-        : "https://via.placeholder.com/150";
+    final imageUrl = CourtApiHelper.resolveImageUrl(
+      court.imageUrl,
+      placeholder: "https://via.placeholder.com/150",
+    );
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

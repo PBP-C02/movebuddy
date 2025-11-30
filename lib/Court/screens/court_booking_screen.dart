@@ -9,9 +9,9 @@ class CourtBookingScreen extends StatefulWidget {
   final DateTime preSelectedDate;
 
   const CourtBookingScreen({
-    Key? key, 
-    required this.courtId, 
-    required this.preSelectedDate
+    Key? key,
+    required this.courtId,
+    required this.preSelectedDate,
   }) : super(key: key);
 
   @override
@@ -28,7 +28,9 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Tidak bisa membuka WhatsApp di perangkat ini")),
+        const SnackBar(
+          content: Text("Tidak bisa membuka WhatsApp di perangkat ini"),
+        ),
       );
     }
   }
@@ -41,15 +43,19 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
     final api = CourtApiHelper(request);
 
     // Format tanggal: YYYY-MM-DD
-    final dateStr = "${widget.preSelectedDate.year}-${widget.preSelectedDate.month.toString().padLeft(2, '0')}-${widget.preSelectedDate.day.toString().padLeft(2, '0')}";
+    final dateStr =
+        "${widget.preSelectedDate.year}-${widget.preSelectedDate.month.toString().padLeft(2, '0')}-${widget.preSelectedDate.day.toString().padLeft(2, '0')}";
 
     try {
       final response = await api.createBooking(widget.courtId, dateStr);
-      final waLink = await api.generateWhatsappLink(widget.courtId, dateStr: dateStr);
+      final waLink = await api.generateWhatsappLink(
+        widget.courtId,
+        dateStr: dateStr,
+      );
 
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         // Tampilkan pesan sukses
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -64,8 +70,8 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
 
         // Kembali ke halaman list (pop 2x: dari booking -> detail -> list)
         // Atau pop sekali ke detail
-        Navigator.pop(context); 
-        Navigator.pop(context); 
+        Navigator.pop(context);
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -73,7 +79,9 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
         // Tampilkan pesan error (misal: saldo kurang, atau sudah dibooking orang lain)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Gagal Booking: ${e.toString().replaceAll('Exception:', '')}"),
+            content: Text(
+              "Gagal Booking: ${e.toString().replaceAll('Exception:', '')}",
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -84,7 +92,8 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
   @override
   Widget build(BuildContext context) {
     // Format tampilan tanggal
-    final displayDate = "${widget.preSelectedDate.day}/${widget.preSelectedDate.month}/${widget.preSelectedDate.year}";
+    final displayDate =
+        "${widget.preSelectedDate.day}/${widget.preSelectedDate.month}/${widget.preSelectedDate.year}";
 
     return Scaffold(
       appBar: AppBar(title: const Text("Konfirmasi Booking")),
@@ -98,7 +107,7 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            
+
             // Info Card
             Container(
               padding: const EdgeInsets.all(16),
@@ -118,7 +127,7 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
             ),
 
             const Spacer(),
-            
+
             // Tombol Confirm
             SizedBox(
               width: double.infinity,
@@ -127,13 +136,19 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
                 onPressed: _isLoading ? null : _submitBooking,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
                         "KONFIRMASI BOOKING",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
               ),
             ),
@@ -150,7 +165,10 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
         ],
       ),
     );

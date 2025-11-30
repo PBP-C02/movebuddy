@@ -178,9 +178,10 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
 
           final detail = snapshot.data!;
           final basic = detail.basicInfo;
-          String imageUrl = basic.imageUrl != null 
-              ? "${CourtApiHelper.baseUrl}${basic.imageUrl}" 
-              : "https://via.placeholder.com/400x200";
+          final imageUrl = CourtApiHelper.resolveImageUrl(
+            basic.imageUrl,
+            placeholder: "https://via.placeholder.com/400x200",
+          );
 
           return Column(
             children: [
