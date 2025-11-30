@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:move_buddy/Sport_Partner/models/partner_post.dart';
 import 'package:move_buddy/Sport_Partner/screens/create_post_form.dart';
 import 'package:move_buddy/Sport_Partner/screens/post_detail_page.dart';
+import 'package:move_buddy/Sport_Partner/widgets/partner_card.dart'; // Import Widget Baru
+import 'package:move_buddy/Sport_Partner/constants.dart'; // Pastikan constants ada untuk baseUrl
 
 class SportPartnerPage extends StatefulWidget {
   const SportPartnerPage({super.key});
@@ -13,11 +15,11 @@ class SportPartnerPage extends StatefulWidget {
 }
 
 class _SportPartnerPageState extends State<SportPartnerPage> {
+  
   Future<List<PartnerPost>> fetchPosts(CookieRequest request) async {
-    // Ganti URL sesuai endpoint JSON yang Anda buat
-    final response = await request.get('http://127.0.0.1:8000/sport_partner/json/'); 
+    // Gunakan baseUrl dari constants.dart jika ada, atau hardcode untuk testing
+    final response = await request.get('$baseUrl/sport_partner/json/'); 
     
-    // Mapping manual jika format JSON dari Django tidak persis sama dengan model
     List<PartnerPost> listPosts = [];
     for (var d in response) {
       if (d != null) {
@@ -32,81 +34,99 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
     final request = context.watch<CookieRequest>();
 
     return Scaffold(
+      // App Bar transparan agar background terlihat jika diinginkan, atau solid lime
       appBar: AppBar(
-        title: const Text('Find Your Sport Partner'),
-        backgroundColor: Colors.blueAccent,
+        title: const Text(
+          'Find Your Partner', 
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)
+        ),
+        backgroundColor: const Color(0xFF84CC16), // Lime Color
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF84CC16),
         onPressed: () async {
-        final result = await Navigator.push(
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const CreatePostPage()),
           );
           if (result == true) {
             setState(() {});
-          } 
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: FutureBuilder(
-        future: fetchPosts(request),
-        builder: (context, AsyncSnapshot snapshot) {
-          if (snapshot.data == null) {
-            return const Center(child: CircularProgressIndicator());
-          } else {
-            if (!snapshot.hasData) {
-              return const Center(
-                child: Text("Belum ada aktivitas olahraga."),
-              );
-            } else {
-              return ListView.builder(
-                itemCount: snapshot.data!.length,
-                itemBuilder: (_, index) {
-                  PartnerPost post = snapshot.data![index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PostDetailPage(post: post),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              post.title,
-                              style: const TextStyle(
-                                fontSize: 18.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Chip(label: Text(post.category.toUpperCase())),
-                            const SizedBox(height: 8),
-                            Text("Lokasi: ${post.lokasi}"),
-                            Text("Jadwal: ${post.tanggal.toIso8601String().substring(0, 10)} | ${post.jamMulai} - ${post.jamSelesai}"),
-                            const SizedBox(height: 8),
-                            Text(
-                              post.description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            }
           }
         },
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: Stack(
+        children: [
+          // LAYER 1: Background Image Placeholder
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.grey[100], // Placeholder warna background
+            // Nanti kalau mau pakai gambar, uncomment ini:
+            /*
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/bg_pattern.png'),
+                fit: BoxFit.cover,
+                opacity: 0.1, 
+              ),
+            ),
+            */
+          ),
+
+          // LAYER 2: List Content
+          FutureBuilder(
+            future: fetchPosts(request),
+            builder: (context, AsyncSnapshot snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.sports_soccer, size: 80, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          "Belum ada aktivitas olahraga.\nBuat sekarang!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  return ListView.builder(
+                    padding: const EdgeInsets.only(top: 16, bottom: 80), // Padding bawah biar ga ketutup FAB
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (_, index) {
+                      PartnerPost post = snapshot.data![index];
+                      // Panggil Widget Card yang sudah kita buat
+                      return PartnerCard(
+                        post: post,
+                        onTap: () async {
+                           final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PostDetailPage(post: post),
+                            ),
+                          );
+                          // Jika kembali dari detail (misal habis delete), refresh list
+                          if (result == true) {
+                            setState(() {});
+                          }
+                        },
+                      );
+                    },
+                  );
+                }
+              }
+            },
+          ),
+        ],
       ),
     );
   }

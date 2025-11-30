@@ -17,6 +17,7 @@ class PartnerPost {
     String lokasi;
     int totalParticipants;
     bool isParticipant;
+    bool isCreator;
 
     PartnerPost({
         required this.postId,
@@ -31,6 +32,7 @@ class PartnerPost {
         required this.lokasi,
         required this.totalParticipants,
         required this.isParticipant,
+        required this.isCreator,
     });
 
     factory PartnerPost.fromJson(Map<String, dynamic> json) => PartnerPost(
@@ -46,6 +48,7 @@ class PartnerPost {
         lokasi: json["lokasi"],
         totalParticipants: json["total_participants"] ?? 0,
         isParticipant: json["is_participant"] ?? false,
+        isCreator: json["is_creator"] ?? false,
     );
 
     Map<String, dynamic> toJson() => {
