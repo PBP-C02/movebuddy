@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
-import 'package:move_buddy/Court/screens/courts_list_screen.dart';
+import 'package:move_buddy/Court/screens/court_list_screen.dart';
 import 'package:move_buddy/Event/screens/event_list_page.dart';
 import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
 import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
@@ -147,7 +147,7 @@ class _HomePageState extends State<HomePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const CourtsListScreen(),
+                          builder: (context) => const CourtListScreen(),
                         ),
                       );
                     },

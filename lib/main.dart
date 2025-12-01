@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
+
 import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
 import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -13,17 +15,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Provider(
-      create: (_) {
-        CookieRequest request = CookieRequest();
-        return request;
-      },
+    return MultiProvider(
+      providers: [
+        Provider<CookieRequest>(create: (_) => CookieRequest()),
+      
+      ],
       child: MaterialApp(
         title: 'Move Buddy',
+        debugShowCheckedModeBanner: false, 
         theme: ThemeData(
-          // Warna Lime sesuai request design html kamu
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF84CC16)),
           useMaterial3: true,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF84CC16),
+            foregroundColor: Colors.white,
+          ),
         ),
         home: const RootPage(),
       ),
@@ -39,24 +45,30 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
-  // Ganti URL sesuai environment (Localhost/Deploy)
-  final String baseUrl = "http://127.0.0.1:8000"; 
+  String baseUrl = "";
 
   @override
   void initState() {
     super.initState();
-    checkSession();
+    _initUrl();
+    
+    Future.delayed(Duration.zero, () {
+      checkSession();
+    });
+  }
+
+  void _initUrl() {
+      baseUrl = "http://127.0.0.1:8000";
+
   }
 
   Future<void> checkSession() async {
     final request = context.read<CookieRequest>();
     try {
-      final response = await request.get("$baseUrl/auth/check-session/"); // Pastikan URL di urls.py backend benar
+      final response = await request.get("$baseUrl/auth_profile/check-session/");
 
       if (mounted) {
-        if (response['loggedIn'] == true) {
-          // Ambil nama user dari response backend buat ditampilkan di Home
-          
+        if (request.loggedIn || (response is Map && response['status'] == true)) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const HomePage()),
@@ -70,6 +82,7 @@ class _RootPageState extends State<RootPage> {
       }
     } catch (e) {
       if (mounted) {
+        debugPrint("Error check session: $e");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -81,7 +94,16 @@ class _RootPageState extends State<RootPage> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text("Memuat sesi...", style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
     );
   }
 }

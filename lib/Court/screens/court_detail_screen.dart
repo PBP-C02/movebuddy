@@ -1,196 +1,107 @@
-// lib/court/screens/court_detail_screen.dart
-
-import 'dart:developer' as developer;
-
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../models/court.dart';
-import '../services/court_service.dart';
-import '../utils/court_helpers.dart';
-import 'edit_court_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+
+import '../models/court_models.dart';
+import '../helpers/court_api_helper.dart';
+import 'court_booking_screen.dart';
+import 'court_form_screen.dart';
 
 class CourtDetailScreen extends StatefulWidget {
   final int courtId;
-  final CourtService courtService;
 
-  const CourtDetailScreen({
-    super.key,
-    required this.courtId,
-    required this.courtService,
-  });
+  const CourtDetailScreen({Key? key, required this.courtId}) : super(key: key);
 
   @override
-  State<CourtDetailScreen> createState() => _CourtDetailScreenState();
+  _CourtDetailScreenState createState() => _CourtDetailScreenState();
 }
 
 class _CourtDetailScreenState extends State<CourtDetailScreen> {
-  Court? _court;
-  bool _isLoading = true;
+  late Future<CourtDetail> _detailFuture;
+  
+  // State Cek Jadwal
   DateTime _selectedDate = DateTime.now();
-  bool _isAvailable = true;
-  bool _canManage = false;
-  bool _isCheckingAvailability = false;
+  bool? _isDateAvailable;
+  bool _checkingSchedule = false;
+  bool _isInit = true;
 
   @override
-  void initState() {
-    super.initState();
-    _loadCourtDetail();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      final request = context.read<CookieRequest>();
+      _refreshDetail(request);
+      _isInit = false;
+    }
   }
 
-  Future<void> _loadCourtDetail() async {
-    setState(() => _isLoading = true);
+  void _refreshDetail(CookieRequest request) {
+    setState(() {
+      _detailFuture = CourtApiHelper(request).fetchCourtDetail(widget.courtId);
+    });
+    // Reset status jadwal & Cek default hari ini
+    setState(() {
+       _isDateAvailable = null;
+    });
+    _checkAvailability(request); 
+  }
 
+  // Cek ketersediaan tanggal
+  Future<void> _checkAvailability(CookieRequest request) async {
+    if (!mounted) return;
+    
+    setState(() => _checkingSchedule = true);
+    String formattedDate = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2,'0')}-${_selectedDate.day.toString().padLeft(2,'0')}";
+    
     try {
-      final court = await widget.courtService.getCourtDetail(widget.courtId);
-      final availability = await widget.courtService.getAvailability(
-        widget.courtId,
-        _selectedDate,
-      );
-      final availableNow = availability['available'] ?? true;
-
+      bool available = await CourtApiHelper(request).checkAvailability(widget.courtId, formattedDate);
       if (mounted) {
-        setState(() {
-          _court = court.copyWith(isAvailable: availableNow);
-          _isAvailable = availableNow;
-          _canManage = availability['can_manage'] ?? false;
-          _isLoading = false;
-        });
+        setState(() => _isDateAvailable = available);
+        if (!available) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Tanggal ini sudah dibooking, pilih tanggal lain.")),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading court: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal cek jadwal")));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _checkingSchedule = false);
       }
     }
   }
 
-  Future<void> _checkAvailability() async {
-    setState(() => _isCheckingAvailability = true);
-
-    try {
-      final availability = await widget.courtService.getAvailability(
-        widget.courtId,
-        _selectedDate,
-      );
-      final availableNow = availability['available'] ?? true;
-
-      if (mounted) {
-        setState(() {
-          _isAvailable = availableNow;
-          _canManage = availability['can_manage'] ?? false;
-          if (_court != null) {
-            _court = _court!.copyWith(isAvailable: availableNow);
-          }
-          _isCheckingAvailability = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isCheckingAvailability = false);
-        developer.log('Error checking availability', error: e);
-      }
-    }
-  }
-
-  Future<void> _setAvailability(bool available) async {
-    try {
-      final success = await widget.courtService.setAvailability(
-        widget.courtId,
-        _selectedDate,
-        available,
-      );
-
-      if (success && mounted) {
-        setState(() {
-          _isAvailable = available;
-          if (_court != null) {
-            _court = _court!.copyWith(isAvailable: available);
-          }
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              available
-                  ? 'Berhasil menandai tersedia'
-                  : 'Berhasil menandai tidak tersedia',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memperbarui ketersediaan: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _bookViaWhatsApp() async {
-    try {
-      final dateStr = CourtHelpers.formatDateForApi(_selectedDate);
-      final link = await widget.courtService.getWhatsAppLink(
-        widget.courtId,
-        date: dateStr,
-      );
-
-      final uri = Uri.parse(link);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal membuka WhatsApp')),
-        );
-      }
-    }
-  }
-
-  Future<void> _navigateToEditCourt() async {
-    if (_court == null) return;
-    final updated = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EditCourtScreen(
-          court: _court!,
-          courtService: widget.courtService,
-        ),
-      ),
+  Future<void> _pickDate(BuildContext context) async {
+    final request = context.read<CookieRequest>();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-    if (updated == true && mounted) {
-      _loadCourtDetail();
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        _isDateAvailable = null;
+      });
+      _checkAvailability(request);
     }
   }
 
-  Future<void> _deleteCourt() async {
+  Future<void> _deleteCourt(CookieRequest request) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text('Hapus Lapangan?'),
-        content: const Text(
-          'Tindakan ini tidak dapat dibatalkan. Data lapangan akan hilang secara permanen.',
-        ),
+      builder: (ctx) => AlertDialog(
+        title: const Text("Hapus Lapangan?"),
+        content: const Text("Data yang dihapus tidak dapat dikembalikan."),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Ya, hapus sekarang'),
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text("Hapus", style: TextStyle(color: Colors.red))
           ),
         ],
       ),
@@ -198,22 +109,14 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
 
     if (confirm == true) {
       try {
-        final success = await widget.courtService.deleteCourt(widget.courtId);
-
-        if (success && mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lapangan berhasil dihapus')),
-          );
+        await CourtApiHelper(request).deleteCourt(widget.courtId);
+        if (mounted) {
+          Navigator.pop(context); // Keluar dari detail
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lapangan dihapus")));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal menghapus lapangan: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal hapus: $e")));
         }
       }
     }
@@ -221,553 +124,208 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          title: const Text('Detail Lapangan'),
-          backgroundColor: Colors.white,
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFCBED98)),
-          ),
-        ),
-      );
-    }
-
-    if (_court == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          title: const Text('Detail Lapangan'),
-          backgroundColor: Colors.white,
-        ),
-        body: const Center(child: Text('Court not found')),
-      );
-    }
+    final request = context.watch<CookieRequest>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              _buildImage(),
-              _buildContent(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-          const Spacer(),
-          if (_canManage) ...[
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.edit, color: Color(0xFF64748B)),
-                onPressed: _navigateToEditCourt,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: _deleteCourt,
-              ),
-            ),
-          ],
+      appBar: AppBar(
+        title: const Text("Detail Lapangan"),
+        actions: [
+          // FutureBuilder untuk akses edit/delete
+          FutureBuilder<CourtDetail>(
+            future: _detailFuture,
+            builder: (context, snapshot) {
+              if (snapshot.hasData && snapshot.data!.ownedByUser) {
+                return PopupMenuButton<String>(
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CourtFormScreen(court: snapshot.data!.basicInfo),
+                        ),
+                      );
+                      if (result == true) {
+                        _refreshDetail(request);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data berhasil diperbarui")));
+                        }
+                      }
+                    } else if (value == 'delete') {
+                      _deleteCourt(request);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, color: Colors.blue), SizedBox(width: 8), Text("Edit")])),
+                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, color: Colors.red), SizedBox(width: 8), Text("Hapus")])),
+                  ],
+                );
+              }
+              return const SizedBox();
+            },
+          )
         ],
       ),
-    );
-  }
+      body: FutureBuilder<CourtDetail>(
+        future: _detailFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          } else if (!snapshot.hasData) {
+             return const Center(child: Text("Data tidak ditemukan"));
+          }
 
-  Widget _buildImage() {
-    return Container(
-      height: 250,
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: _court!.imageUrl != null
-            ? Image.network(
-                _court!.imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildPlaceholder();
-                },
-              )
-            : _buildPlaceholder(),
-      ),
-    );
-  }
+          final detail = snapshot.data!;
+          final basic = detail.basicInfo;
+          final imageUrl = CourtApiHelper.resolveImageUrl(
+            basic.imageUrl,
+            placeholder: "https://via.placeholder.com/400x200",
+          );
 
-  Widget _buildPlaceholder() {
-    return Container(
-      color: const Color(0xFFF1F5F9),
-      child: Center(
-        child: Icon(
-          Icons.sports_tennis,
-          size: 80,
-          color: Colors.grey[400],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContent() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 80,
-            offset: const Offset(0, 32),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildBadges(),
-          const SizedBox(height: 16),
-          Text(
-            _court!.name,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              color: Color(0xFF0F172A),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${_court!.sportDisplayName} • ${_court!.location}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2.8,
-              color: Color(0xFF64748B),
-            ),
-          ),
-          if (_court!.description.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            _buildSection('DESCRIPTION', _court!.description),
-          ],
-          const SizedBox(height: 24),
-          _buildSection('ADDRESS', _court!.address),
-          const SizedBox(height: 24),
-          _buildFacilities(),
-          const SizedBox(height: 32),
-          _buildPriceCard(),
-          const SizedBox(height: 24),
-          _buildBookingSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBadges() {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: _court!.isAvailable
-                ? const Color(0xFFCBED98).withValues(alpha: 0.2)
-                : Colors.red.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: _court!.isAvailable
-                  ? const Color(0xFFCBED98)
-                  : Colors.red,
-            ),
-          ),
-          child: Text(
-            _court!.isAvailable ? 'TERSEDIA' : 'PENUH',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2,
-              color: _court!.isAvailable
-                  ? const Color(0xFF10B981)
-                  : Colors.red[700],
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        _buildRatingBadge(),
-      ],
-    );
-  }
-
-  Widget _buildRatingBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ...List.generate(5, (index) {
-            return Icon(
-              Icons.star,
-              size: 16,
-              color: index < _court!.rating.floor()
-                  ? Colors.amber
-                  : const Color(0xFFE2E8F0),
-            );
-          }),
-          const SizedBox(width: 8),
-          Text(
-            '${CourtHelpers.formatRating(_court!.rating)}/5.0',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF64748B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection(String title, String content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 2.8,
-            color: Color(0xFF64748B),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9).withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Text(
-            content,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: Color(0xFF64748B),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFacilities() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'FACILITIES',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 2.8,
-            color: Color(0xFF64748B),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _court!.facilitiesList.map((facility) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    size: 16,
-                    color: Color(0xFF10B981),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    facility,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPriceCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'PRICE PER HOUR',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 3,
-              color: Colors.white70,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            CourtHelpers.formatPrice(_court!.price),
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBookingSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'TANGGAL RESERVASI',
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 2,
-            color: Color(0xFF64748B),
-          ),
-        ),
-        const SizedBox(height: 12),
-        InkWell(
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate,
-              firstDate: CourtHelpers.getMinDate(),
-              lastDate: CourtHelpers.getMaxDate(),
-            );
-            if (picked != null) {
-              setState(() => _selectedDate = picked);
-              _checkAvailability();
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFF64748B),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    CourtHelpers.formatDate(_selectedDate),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (_isCheckingAvailability)
-          const Center(child: CircularProgressIndicator())
-        else
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _isAvailable
-                  ? const Color(0xFFCBED98).withValues(alpha: 0.1)
-                  : Colors.red.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _isAvailable
-                    ? const Color(0xFFCBED98)
-                    : Colors.red,
-              ),
-            ),
-            child: Text(
-              _isAvailable
-                  ? 'Lapangan tersedia pada ${CourtHelpers.formatDate(_selectedDate)}.'
-                  : 'Lapangan tidak tersedia pada ${CourtHelpers.formatDate(_selectedDate)}.',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _isAvailable
-                    ? const Color(0xFF10B981)
-                    : Colors.red[700],
-              ),
-            ),
-          ),
-        if (_canManage) ...[
-          const SizedBox(height: 16),
-          Row(
+          return Column(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _isAvailable ? null : () => _setAvailability(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.withValues(alpha: 0.1),
-                    foregroundColor: Colors.green[700],
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: Colors.green.withValues(alpha: 0.3),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // --- Header Image ---
+                      Image.network(
+                        imageUrl,
+                        height: 250,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => Container(
+                          height: 250, 
+                          width: double.infinity,
+                          color: Colors.grey[300], 
+                          child: const Icon(Icons.broken_image, size: 50)
+                        ),
                       ),
-                    ),
+                      
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // --- Judul & Harga ---
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(child: Text(basic.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold))),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.green[100], borderRadius: BorderRadius.circular(8)),
+                                  child: Text("Rp ${basic.price.toStringAsFixed(0)}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            // --- Lokasi & Rating ---
+                            Row(children: [
+                              const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Expanded(child: Text("${basic.location} - ${basic.address}", style: const TextStyle(color: Colors.grey))),
+                            ]),
+                            const SizedBox(height: 4),
+                            Row(children: [
+                              const Icon(Icons.star, size: 16, color: Colors.amber),
+                              const SizedBox(width: 4),
+                              Text("${basic.rating} / 5.0", style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ]),
+                            const Divider(height: 30),
+
+                            // --- Fasilitas ---
+                            const Text("Fasilitas", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 4),
+                            Text(basic.facilities.isEmpty ? "-" : basic.facilities),
+                            const SizedBox(height: 16),
+
+                            // --- Deskripsi ---
+                            const Text("Deskripsi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 4),
+                            Text(detail.description.isEmpty ? "Tidak ada deskripsi." : detail.description),
+                            const SizedBox(height: 16),
+
+                            // --- Owner Info ---
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(8)),
+                              child: Row(children: [
+                                const Icon(Icons.person, color: Colors.blue),
+                                const SizedBox(width: 8),
+                                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  const Text("Pemilik:", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                  Text(detail.ownerName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                ]),
+                              ]),
+                            ),
+                            const Divider(height: 40),
+
+                            // --- Booking Section ---
+                            const Text("Cek Ketersediaan & Booking", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: () => _pickDate(context),
+                                  icon: const Icon(Icons.calendar_month),
+                                  label: Text("${_selectedDate.toLocal()}".split(' ')[0]),
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 1),
+                                ),
+                                const SizedBox(width: 16),
+                                if (_checkingSchedule)
+                                  const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                else
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: _isDateAvailable == true ? Colors.green : (_isDateAvailable == false ? Colors.red : Colors.grey),
+                                      borderRadius: BorderRadius.circular(20)
+                                    ),
+                                    child: Text(
+                                      _isDateAvailable == true ? "Tersedia" : (_isDateAvailable == false ? "Penuh" : "Cek Jadwal"),
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('Tandai Tersedia'),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
+              
+              // --- Bottom Button ---
+              Container(
+                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                decoration: const BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))]),
                 child: ElevatedButton(
-                  onPressed:
-                      !_isAvailable ? null : () => _setAvailability(false),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withValues(alpha: 0.1),
-                    foregroundColor: Colors.red[700],
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
-                    ),
+                    backgroundColor: Colors.blue, 
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
                   ),
-                  child: const Text('Tidak Tersedia'),
+                  onPressed: (_isDateAvailable == true) 
+                      ? () {
+                          Navigator.push(
+                            context, 
+                            MaterialPageRoute(builder: (_) => CourtBookingScreen(courtId: widget.courtId, preSelectedDate: _selectedDate))
+                          );
+                        }
+                      : null, 
+                  child: const Text("Booking Sekarang", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
-          ),
-        ],
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isAvailable ? _bookViaWhatsApp : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF25D366),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.message),
-                SizedBox(width: 8),
-                Text(
-                  'BOOK VIA WHATSAPP',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 }
