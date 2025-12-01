@@ -3,6 +3,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Coach/models/coach_entry.dart';
 import 'package:move_buddy/Coach/widgets/coach_entry_card.dart';
+import 'package:move_buddy/Coach/screens/coach_create_page.dart';
 
 class CoachEntryListPage extends StatefulWidget {
   const CoachEntryListPage({super.key});
@@ -65,10 +66,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
   }
 
   Map<String, String> _buildQueryParams() {
-    final params = <String, String>{
-      'view': _viewMode,
-      'sort': _sortBy,
-    };
+    final params = <String, String>{'view': _viewMode, 'sort': _sortBy};
 
     if (_searchQuery.isNotEmpty) params['q'] = _searchQuery;
     if (_selectedLocation.isNotEmpty) params['location'] = _selectedLocation;
@@ -87,14 +85,13 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
   Future<List<Coach>> _fetchCoaches() async {
     try {
       final queryString = Uri(queryParameters: _buildQueryParams()).query;
-      final paths = <String>{
-        _searchPath,
-      }.toList();
+      final paths = <String>{_searchPath}.toList();
 
       Object? lastError;
 
       for (final path in paths) {
-        final url = '$_baseUrl$path${queryString.isEmpty ? '' : '?$queryString'}';
+        final url =
+            '$_baseUrl$path${queryString.isEmpty ? '' : '?$queryString'}';
         try {
           final response = await _request.get(url);
 
@@ -148,6 +145,16 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
     await _applyFilters();
   }
 
+  Future<void> _openCreateCoach() async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const CoachCreatePage()),
+    );
+    if (created == true) {
+      _refresh();
+    }
+  }
+
   Future<void> _applyFilters() async {
     setState(() {
       _coachFuture = _fetchCoaches();
@@ -198,7 +205,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
-                  )
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -426,7 +433,9 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _selectedLocation.isEmpty ? '' : _selectedLocation,
+                        value: _selectedLocation.isEmpty
+                            ? ''
+                            : _selectedLocation,
                         items: [
                           for (final loc in _locationOptions)
                             DropdownMenuItem(
@@ -526,13 +535,16 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Text(
-                      'Menampilkan $_resultCount coach',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    Expanded(
+                      child: Text(
+                        'Menampilkan $_resultCount coach',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const Spacer(),
-                    SizedBox(
-                      width: 170,
+                    const SizedBox(width: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
                       child: DropdownButtonFormField<String>(
                         value: _sortBy,
                         decoration: InputDecoration(
@@ -587,6 +599,13 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         centerTitle: true,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openCreateCoach,
+        backgroundColor: Colors.green.shade600,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Tambah'),
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
