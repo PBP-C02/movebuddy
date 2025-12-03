@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:intl/intl.dart';
 
 import '../models/court_models.dart';
 import '../helpers/court_api_helper.dart';
@@ -22,6 +23,10 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
   // State Cek Jadwal
   DateTime _selectedDate = DateTime.now();
   bool _isInit = true;
+  bool? _selectedDateAvailability;
+  bool _isLoadingAvailability = false;
+  bool _canManageAvailability = false;
+  bool _isUpdatingAvailability = false;
 
   @override
   void didChangeDependencies() {
@@ -37,9 +42,83 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
     setState(() {
       _detailFuture = CourtApiHelper(request).fetchCourtDetail(widget.courtId);
     });
+    _loadAvailabilityStatus(request);
   }
 
-  Future<void> _pickDate(BuildContext context) async {
+  String _formatDateForApi(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  String _formatDateForLabel(DateTime date) {
+    return DateFormat('d MMM yyyy').format(date);
+  }
+
+  Future<void> _loadAvailabilityStatus(CookieRequest request) async {
+    setState(() {
+      _isLoadingAvailability = true;
+    });
+    try {
+      final status = await CourtApiHelper(request).fetchAvailabilityStatus(
+        widget.courtId,
+        _formatDateForApi(_selectedDate),
+      );
+      if (!mounted) return;
+      setState(() {
+        _selectedDateAvailability = status.available;
+        _canManageAvailability = status.canManage;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _selectedDateAvailability = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal memuat status ketersediaan: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingAvailability = false);
+      }
+    }
+  }
+
+  Future<void> _updateAvailabilityStatus(CookieRequest request, bool isAvailable) async {
+    setState(() {
+      _isUpdatingAvailability = true;
+    });
+    try {
+      final updated = await CourtApiHelper(request).setAvailability(
+        widget.courtId,
+        dateStr: _formatDateForApi(_selectedDate),
+        isAvailable: isAvailable,
+      );
+      if (!mounted) return;
+      setState(() {
+        _selectedDateAvailability = updated;
+        _canManageAvailability = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isAvailable ? "Ditandai tersedia untuk tanggal ini" : "Ditandai tidak tersedia untuk tanggal ini",
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal mengubah status: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingAvailability = false);
+      }
+    }
+  }
+
+  Future<void> _pickDate(BuildContext context, CookieRequest request) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -47,7 +126,11 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
     if (picked != null && picked != _selectedDate) {
-      setState(() => _selectedDate = picked);
+      setState(() {
+        _selectedDate = picked;
+        _selectedDateAvailability = null;
+      });
+      _loadAvailabilityStatus(request);
     }
   }
 
@@ -154,6 +237,9 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
             basic.imageUrl,
             placeholder: "https://via.placeholder.com/400x200",
           );
+          final availabilityForSelectedDate = _selectedDateAvailability ?? basic.isAvailableToday;
+          final canManageAvailability = detail.ownedByUser || _canManageAvailability;
+          final bookingEnabled = !_isLoadingAvailability && availabilityForSelectedDate;
 
           return Column(
             children: [
@@ -189,13 +275,25 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: basic.isAvailableToday ? const Color(0xFFDFF5E0) : const Color(0xFFFFE6E3),
+                                      color: _isLoadingAvailability
+                                          ? const Color(0xFFF2F4F7)
+                                          : availabilityForSelectedDate
+                                              ? const Color(0xFFDFF5E0)
+                                              : const Color(0xFFFFE6E3),
                                       borderRadius: BorderRadius.circular(18),
                                     ),
                                     child: Text(
-                                      basic.isAvailableToday ? "Available" : "Unavailable",
+                                      _isLoadingAvailability
+                                          ? "Checking..."
+                                          : availabilityForSelectedDate
+                                              ? "Available"
+                                              : "Unavailable",
                                       style: TextStyle(
-                                        color: basic.isAvailableToday ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F),
+                                        color: _isLoadingAvailability
+                                            ? Colors.black87
+                                            : availabilityForSelectedDate
+                                                ? const Color(0xFF2E7D32)
+                                                : const Color(0xFFD32F2F),
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -422,9 +520,9 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                       children: [
                                         Expanded(
                                           child: OutlinedButton.icon(
-                                            onPressed: () => _pickDate(context),
+                                            onPressed: () => _pickDate(context, request),
                                             icon: const Icon(Icons.calendar_month),
-                                            label: Text("${_selectedDate.toLocal()}".split(' ')[0]),
+                                            label: Text(_formatDateForLabel(_selectedDate)),
                                             style: OutlinedButton.styleFrom(
                                               padding: const EdgeInsets.symmetric(vertical: 14),
                                               side: const BorderSide(color: Color(0xFF8BC34A)),
@@ -436,7 +534,11 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                           decoration: BoxDecoration(
-                                            color: basic.isAvailableToday ? const Color(0xFFDFF5E0) : const Color(0xFFFFE6E3),
+                                            color: _isLoadingAvailability
+                                                ? const Color(0xFFF2F4F7)
+                                                : availabilityForSelectedDate
+                                                    ? const Color(0xFFDFF5E0)
+                                                    : const Color(0xFFFFE6E3),
                                             borderRadius: BorderRadius.circular(12),
                                             border: Border.all(color: const Color(0xFFE0E3EB)),
                                           ),
@@ -444,22 +546,76 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                basic.isAvailableToday ? "Tersedia" : "Tidak tersedia",
+                                                _isLoadingAvailability
+                                                    ? "Memeriksa..."
+                                                    : availabilityForSelectedDate
+                                                        ? "Tersedia"
+                                                        : "Tidak tersedia",
                                                 style: TextStyle(
-                                                  color: basic.isAvailableToday ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F),
+                                                  color: _isLoadingAvailability
+                                                      ? Colors.black87
+                                                      : availabilityForSelectedDate
+                                                          ? const Color(0xFF2E7D32)
+                                                          : const Color(0xFFD32F2F),
                                                   fontWeight: FontWeight.w700,
                                                 ),
                                               ),
                                               const SizedBox(height: 4),
-                                              const Text(
-                                                "Status hanya bisa diubah pemilik.",
-                                                style: TextStyle(color: Colors.black54, fontSize: 12),
+                                              Text(
+                                                "Status untuk ${_formatDateForLabel(_selectedDate)}",
+                                                style: const TextStyle(color: Colors.black54, fontSize: 12),
                                               ),
                                             ],
                                           ),
                                         ),
                                       ],
                                     ),
+                                    if (canManageAvailability) ...[
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: (_isLoadingAvailability || _isUpdatingAvailability || _selectedDateAvailability == true)
+                                                  ? null
+                                                  : () => _updateAvailabilityStatus(request, true),
+                                              icon: const Icon(Icons.check_circle_outline),
+                                              label: Text(_isUpdatingAvailability ? "Menyimpan..." : "Tandai Tersedia"),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF8BC34A),
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: (_isLoadingAvailability || _isUpdatingAvailability || _selectedDateAvailability == false)
+                                                  ? null
+                                                  : () => _updateAvailabilityStatus(request, false),
+                                              icon: const Icon(Icons.block, color: Colors.red),
+                                              label: Text(
+                                                _isUpdatingAvailability ? "Menyimpan..." : "Tandai Tidak Tersedia",
+                                                style: const TextStyle(color: Colors.red),
+                                              ),
+                                              style: OutlinedButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                side: const BorderSide(color: Colors.red),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ] else ...[
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        "Status hanya bisa diubah pemilik.",
+                                        style: TextStyle(color: Colors.black54, fontSize: 12),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -529,7 +685,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      onPressed: (basic.isAvailableToday)
+                      onPressed: (bookingEnabled)
                           ? () {
                               Navigator.push(
                                 context,
