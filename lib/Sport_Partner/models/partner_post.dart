@@ -17,7 +17,7 @@ class PartnerPost {
     String lokasi;
     int totalParticipants;
     bool isParticipant;
-    bool isCreator; // Field baru
+    bool isCreator;
 
     PartnerPost({
         required this.postId,
