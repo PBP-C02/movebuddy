@@ -21,6 +21,8 @@ class _CourtListScreenState extends State<CourtListScreen> {
   String _searchQuery = "";
   String _selectedSport = "";
   String _sortOption = "";
+  bool _onlyAvailable = false;
+  final _searchController = TextEditingController();
   final _minPriceController = TextEditingController();
   final _maxPriceController = TextEditingController();
   double _minRating = 0;
@@ -28,9 +30,16 @@ class _CourtListScreenState extends State<CourtListScreen> {
   final _lngController = TextEditingController();
   Timer? _debounce;
   
-  final List<String> _sportTypes = [
-    '', 'tennis', 'basketball', 'soccer', 'badminton', 
-    'volleyball', 'paddle', 'futsal', 'table_tennis'
+  final List<Map<String, String>> _sportFilters = const [
+    {"value": "", "label": "All"},
+    {"value": "tennis", "label": "Tennis"},
+    {"value": "basketball", "label": "Basketball"},
+    {"value": "soccer", "label": "Soccer"},
+    {"value": "badminton", "label": "Badminton"},
+    {"value": "volleyball", "label": "Volleyball"},
+    {"value": "paddle", "label": "Paddle"},
+    {"value": "futsal", "label": "Futsal"},
+    {"value": "table_tennis", "label": "Table Tennis"},
   ];
   final List<Map<String, String>> _sortOptions = const [
     {"value": "", "label": "Default"},
@@ -59,6 +68,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _searchController.dispose();
     _minPriceController.dispose();
     _maxPriceController.dispose();
     _latController.dispose();
@@ -114,213 +124,251 @@ class _CourtListScreenState extends State<CourtListScreen> {
     final request = context.watch<CookieRequest>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Daftar Lapangan")),
-      
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddCourt,
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.add, color: Colors.white),
+      backgroundColor: const Color(0xFFF3F5F9),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text(
+          "Courts",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildFilterCard(request),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async => _refreshData(request),
+                child: FutureBuilder<List<Court>>(
+                  future: _courtsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return ListView(
+                        padding: const EdgeInsets.all(24),
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                                const SizedBox(height: 12),
+                                Text(
+                                  "Terjadi kesalahan: ${snapshot.error}",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: () => _refreshData(request),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2E2E2E),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: const Text("Coba Lagi"),
+                                )
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return ListView(
+                        padding: const EdgeInsets.all(24),
+                        children: const [
+                          SizedBox(height: 80),
+                          Center(child: Text("Tidak ada lapangan ditemukan.")),
+                        ],
+                      );
+                    }
 
-      body: Column(
+                    var courts = snapshot.data!;
+                    if (_onlyAvailable) {
+                      courts = courts.where((c) => c.isAvailableToday).toList();
+                    }
+
+                    if (courts.isEmpty) {
+                      return ListView(
+                        padding: const EdgeInsets.all(24),
+                        children: const [
+                          SizedBox(height: 80),
+                          Center(child: Text("Tidak ada lapangan sesuai filter.")),
+                        ],
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      itemCount: courts.length,
+                      itemBuilder: (context, index) {
+                        return CourtCard(
+                          court: courts[index],
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CourtDetailScreen(courtId: courts[index].id),
+                              ),
+                            );
+                            if (mounted) _refreshData(request);
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterCard(CookieRequest request) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- Filter & Search Bar ---
-          Container(
-            padding: const EdgeInsets.all(8.0),
-            color: Colors.white,
-            child: Column(
-              children: [
-                TextField(
-                  decoration: const InputDecoration(
-                    hintText: "Cari nama atau lokasi...",
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: "Search courts or locations...",
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: const Color(0xFFF7F8FA),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                   ),
                   onChanged: _onSearchChanged,
                 ),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                onPressed: () => _refreshData(request),
+                icon: const Icon(Icons.search, size: 18),
+                label: const Text("Search"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8BC34A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _sportFilters.map((sport) {
+              final selected = _selectedSport == sport["value"];
+              return ChoiceChip(
+                label: Text(sport["label"] ?? ""),
+                selected: selected,
+                selectedColor: const Color(0xFF8BC34A).withOpacity(0.2),
+                labelStyle: TextStyle(
+                  color: selected ? const Color(0xFF2E7D32) : Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
+                onSelected: (_) {
+                  setState(() => _selectedSport = sport["value"] ?? "");
+                  _refreshData(request);
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _onlyAvailable = !_onlyAvailable);
+                  },
                   child: Row(
                     children: [
-                      const Text("Filter: ", style: TextStyle(fontWeight: FontWeight.bold)),
-                      DropdownButton<String>(
-                        value: _selectedSport,
-                        underline: Container(), 
-                        items: _sportTypes.map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value.isEmpty ? "Semua Olahraga" : value),
-                          );
-                        }).toList(),
-                        onChanged: (newVal) {
-                          if (newVal != null && newVal != _selectedSport) {
-                            setState(() {
-                              _selectedSport = newVal;
-                            });
-                            _refreshData(request);
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 120,
-                        child: TextField(
-                          controller: _minPriceController,
-                          decoration: const InputDecoration(
-                            labelText: "Min Harga",
-                            prefixText: "Rp ",
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onSubmitted: (_) => _refreshData(request),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 120,
-                        child: TextField(
-                          controller: _maxPriceController,
-                          decoration: const InputDecoration(
-                            labelText: "Max Harga",
-                            prefixText: "Rp ",
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onSubmitted: (_) => _refreshData(request),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 120,
-                        child: TextField(
-                          controller: _latController,
-                          decoration: const InputDecoration(
-                            labelText: "Lat",
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          onSubmitted: (_) => _refreshData(request),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 120,
-                        child: TextField(
-                          controller: _lngController,
-                          decoration: const InputDecoration(
-                            labelText: "Lng",
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          onSubmitted: (_) => _refreshData(request),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Row(
-                        children: [
-                          const Text("Min Rating"),
-                          Slider(
-                            value: _minRating,
-                            min: 0,
-                            max: 5,
-                            divisions: 5,
-                            label: _minRating.toStringAsFixed(0),
-                            onChanged: (val) {
-                              setState(() => _minRating = val);
-                            },
-                            onChangeEnd: (_) => _refreshData(request),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 8),
-                      DropdownButton<String>(
-                        value: _sortOption,
-                        underline: Container(),
-                        items: _sortOptions
-                            .map((opt) => DropdownMenuItem<String>(
-                                  value: opt["value"],
-                                  child: Text(opt["label"] ?? ""),
-                                ))
-                            .toList(),
+                      Checkbox(
+                        value: _onlyAvailable,
                         onChanged: (val) {
-                          if (val == null) return;
-                          setState(() => _sortOption = val);
-                          _refreshData(request);
+                          setState(() => _onlyAvailable = val ?? false);
                         },
+                        activeColor: const Color(0xFF8BC34A),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
-                      IconButton(
-                        onPressed: () {
-                          _minPriceController.clear();
-                          _maxPriceController.clear();
-                          _latController.clear();
-                          _lngController.clear();
-                          _minRating = 0;
-                          _sortOption = "";
-                          _selectedSport = "";
-                          _searchQuery = "";
-                          _refreshData(request);
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.refresh),
-                        tooltip: "Reset filter",
+                      const SizedBox(width: 4),
+                      const Text(
+                        "Show only available courts",
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          
-          // --- List Content ---
-          Expanded(
-            child: FutureBuilder<List<Court>>(
-              future: _courtsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error, color: Colors.red, size: 40),
-                        const SizedBox(height: 8),
-                        Text("Terjadi kesalahan: ${snapshot.error}", textAlign: TextAlign.center),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () => _refreshData(request),
-                          child: const Text("Coba Lagi"),
-                        )
-                      ],
-                    ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("Tidak ada lapangan ditemukan."));
-                }
-
-                final courts = snapshot.data!;
-                return ListView.builder(
-                  itemCount: courts.length,
-                  itemBuilder: (context, index) {
-                    return CourtCard(
-                      court: courts[index],
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CourtDetailScreen(courtId: courts[index].id),
-                          ),
-                        );
-                        // Refresh data saat kembali dari detail
-                        if (mounted) _refreshData(request);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: "Urutkan",
+                icon: const Icon(Icons.tune),
+                onSelected: (val) {
+                  setState(() => _sortOption = val);
+                  _refreshData(request);
+                },
+                itemBuilder: (context) => _sortOptions
+                    .map(
+                      (opt) => PopupMenuItem(
+                        value: opt["value"],
+                        child: Text(opt["label"] ?? ""),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton(
+                onPressed: _navigateToAddCourt,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8BC34A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text("+ Add Court"),
+              ),
+            ],
           ),
         ],
       ),
