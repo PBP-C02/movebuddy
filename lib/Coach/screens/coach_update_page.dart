@@ -2,28 +2,32 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 
-class CoachCreatePage extends StatefulWidget {
-  const CoachCreatePage({super.key});
+import 'package:move_buddy/Coach/models/coach_entry.dart';
+
+class CoachUpdatePage extends StatefulWidget {
+  final Coach coach;
+
+  const CoachUpdatePage({super.key, required this.coach});
 
   @override
-  State<CoachCreatePage> createState() => _CoachCreatePageState();
+  State<CoachUpdatePage> createState() => _CoachUpdatePageState();
 }
 
-class _CoachCreatePageState extends State<CoachCreatePage> {
+class _CoachUpdatePageState extends State<CoachUpdatePage> {
   static const String _baseUrl = String.fromEnvironment(
     'COACH_BASE_URL',
     defaultValue: 'http://127.0.0.1:8000',
   );
-  static const String _createPath = String.fromEnvironment(
-    'COACH_CREATE_PATH',
-    defaultValue: '/coach/create-flutter/',
+  static const String _updatePath = String.fromEnvironment(
+    'COACH_UPDATE_PATH',
+    defaultValue: '/coach/update-flutter/{id}/',
   );
 
   final _formKey = GlobalKey<FormState>();
@@ -43,6 +47,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
   XFile? _pickedImage;
   String? _imageBase64;
   Uint8List? _imageBytes;
+  String? _existingImageUrl;
   bool _isSubmitting = false;
 
   final List<Map<String, String>> _categories = const [
@@ -72,6 +77,12 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _prefillForm();
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
@@ -81,6 +92,35 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
     _instagramController.dispose();
     _mapsController.dispose();
     super.dispose();
+  }
+
+  void _prefillForm() {
+    final coach = widget.coach;
+    _titleController.text = coach.title;
+    _descriptionController.text = coach.description;
+    _selectedCategory =
+        _categories.map((cat) => cat['value']).contains(coach.category)
+            ? coach.category
+            : 'badminton';
+    _locationController.text = coach.location;
+    _addressController.text = coach.address;
+    _priceController.text = coach.price.toString();
+    _selectedDate = coach.date;
+    _startTime = _parseTime(coach.startTime);
+    _endTime = _parseTime(coach.endTime);
+    _rating = coach.rating.clamp(0, 5).toDouble();
+    _instagramController.text = coach.instagramLink ?? '';
+    _mapsController.text = coach.mapsLink;
+    _existingImageUrl = coach.imageUrl;
+  }
+
+  TimeOfDay? _parseTime(String value) {
+    final parts = value.split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   String _formatTime(TimeOfDay time) {
@@ -102,17 +142,23 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
         _pickedImage = file;
         _imageBase64 = base64Encode(bytes);
         _imageBytes = bytes;
+        _existingImageUrl = null;
       });
     }
   }
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
+    final initial = _selectedDate ?? now;
+    final firstDate = initial.isBefore(now) ? initial : now;
+    final lastDateCandidate = DateTime(now.year + 2);
+    final lastDate =
+        initial.isAfter(lastDateCandidate) ? initial : lastDateCandidate;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? now,
-      firstDate: now,
-      lastDate: DateTime(now.year + 2),
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
@@ -120,9 +166,10 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
   }
 
   Future<void> _selectTime({required bool isStart}) async {
+    final current = isStart ? _startTime : _endTime;
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: current ?? TimeOfDay.now(),
     );
     if (picked != null) {
       setState(() {
@@ -133,6 +180,14 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
         }
       });
     }
+  }
+
+  String _buildUpdateUrl() {
+    if (_updatePath.contains('{id}')) {
+      return '$_baseUrl${_updatePath.replaceAll('{id}', widget.coach.id)}';
+    }
+    final path = _updatePath.endsWith('/') ? _updatePath : '$_updatePath/';
+    return '$_baseUrl$path${widget.coach.id}/';
   }
 
   Future<void> _submit() async {
@@ -159,6 +214,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
     );
 
     final payload = <String, String>{
+      'id': widget.coach.id,
       'title': _titleController.text.trim(),
       'description': _descriptionController.text.trim(),
       'category': _selectedCategory,
@@ -179,7 +235,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
 
     try {
       final response = await request.postJson(
-        '$_baseUrl$_createPath',
+        _buildUpdateUrl(),
         jsonEncode(payload),
       );
 
@@ -192,12 +248,12 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
       if (success) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Coach berhasil dibuat.')));
+        ).showSnackBar(const SnackBar(content: Text('Coach berhasil diperbarui.')));
         Navigator.pop(context, true);
       } else {
         final message =
             (response is Map ? response['message'] : null) ??
-            'Gagal membuat coach, coba lagi.';
+                'Gagal memperbarui coach, coba lagi.';
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
@@ -218,12 +274,28 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
   Widget build(BuildContext context) {
     final ratingOptions =
         List<double>.generate(11, (index) => index * 0.5); // 0.0 - 5.0
+    final currentLocation = _locationController.text.trim();
+    final locationItems = <String>[
+      ..._locationOptions,
+      if (currentLocation.isNotEmpty &&
+          !_locationOptions.contains(currentLocation))
+        currentLocation,
+    ];
+    final dropdownLocationValue = locationItems.contains(currentLocation)
+        ? currentLocation
+        : '';
+
+    final categoryValue = _categories.any(
+      (cat) => cat['value'] == _selectedCategory,
+    )
+        ? _selectedCategory
+        : (_categories.isNotEmpty ? _categories.first['value']! : null);
+
     final dateLabel = _selectedDate == null
         ? 'Pilih tanggal'
         : DateFormat('dd MMM yyyy').format(_selectedDate!);
-    final startLabel = _startTime == null
-        ? 'Jam mulai'
-        : _formatTime(_startTime!);
+    final startLabel =
+        _startTime == null ? 'Jam mulai' : _formatTime(_startTime!);
     final endLabel = _endTime == null ? 'Jam selesai' : _formatTime(_endTime!);
 
     return Scaffold(
@@ -233,7 +305,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
         elevation: 0,
         foregroundColor: Colors.black87,
         title: const Text(
-          'Tambah Coach',
+          'Edit Coach',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
@@ -270,7 +342,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Lengkapi detail coach',
+                        'Perbarui informasi coach',
                         style:
                             TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                       ),
@@ -291,7 +363,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        value: categoryValue,
                         decoration: _filledDecoration('Kategori'),
                         items: _categories
                             .map(
@@ -309,11 +381,9 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _locationController.text.isEmpty
-                            ? ''
-                            : _locationController.text,
+                        value: dropdownLocationValue,
                         decoration: _filledDecoration('Kota'),
-                        items: _locationOptions
+                        items: locationItems
                             .map(
                               (loc) => DropdownMenuItem(
                                 value: loc,
@@ -410,7 +480,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<double>(
                         value: _rating,
-                        decoration: _filledDecoration('Rating awal'),
+                        decoration: _filledDecoration('Rating'),
                         items: ratingOptions
                             .map(
                               (r) => DropdownMenuItem(
@@ -452,27 +522,43 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                         ),
                         icon: const Icon(Icons.image),
                         label: Text(
-                          _pickedImage == null
+                          _pickedImage == null && _existingImageUrl == null
                               ? 'Pilih gambar (opsional)'
                               : 'Ganti gambar',
                         ),
                       ),
-                      if (_pickedImage != null) ...[
+                      if (_pickedImage != null || _existingImageUrl != null) ...[
                         const SizedBox(height: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: kIsWeb && _imageBytes != null
-                              ? Image.memory(
-                                  _imageBytes!,
+                          child: _pickedImage != null
+                              ? (kIsWeb && _imageBytes != null
+                                  ? Image.memory(
+                                      _imageBytes!,
+                                      height: 180,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      File(_pickedImage!.path),
+                                      height: 180,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ))
+                              : Image.network(
+                                  _existingImageUrl!,
                                   height: 180,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  File(_pickedImage!.path),
-                                  height: 180,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                    height: 180,
+                                    width: double.infinity,
+                                    color: Colors.grey.shade200,
+                                    alignment: Alignment.center,
+                                    child:
+                                        const Icon(Icons.broken_image, size: 48),
+                                  ),
                                 ),
                         ),
                       ],
@@ -499,7 +585,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                                   ),
                                 )
                               : const Text(
-                                  'Simpan Coach',
+                                  'Perbarui Coach',
                                   style: TextStyle(fontWeight: FontWeight.w800),
                                 ),
                         ),
