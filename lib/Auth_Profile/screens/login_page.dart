@@ -17,10 +17,6 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  // Ganti dengan URL Deployed atau Localhost kamu
-  // Jangan lupa hapus trailing slash jika di backend path-nya pakai slash
-  final String baseUrl = "http://127.0.0.1:8000"; 
-
   @override
   Widget build(BuildContext context) {
     final request = context.watch<CookieRequest>();

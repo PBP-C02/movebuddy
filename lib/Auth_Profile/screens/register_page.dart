@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:move_buddy/Sport_Partner/constants.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -23,8 +24,6 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _kelamin; // 'L' atau 'P'
   DateTime? _tanggalLahir;
   bool _isLoading = false;
-
-  final String baseUrl = "http://127.0.0.1:8000";
 
   // Date Picker
   Future<void> _selectDate(BuildContext context) async {
