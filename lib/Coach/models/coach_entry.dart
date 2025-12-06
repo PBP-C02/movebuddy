@@ -1,95 +1,176 @@
-// To parse this JSON data, do
-//
-//     final coach = coachFromJson(jsonString);
-
 import 'dart:convert';
 
-List<Coach> coachFromJson(String str) => List<Coach>.from(json.decode(str).map((x) => Coach.fromJson(x)));
+List<Coach> coachFromJson(String str) =>
+    List<Coach>.from(json.decode(str).map((x) => Coach.fromJson(x)));
 
-String coachToJson(List<Coach> data) => json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
+String coachToJson(List<Coach> data) =>
+    json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
 
 class Coach {
-    // categoryDisplay is optional label from backend (e.g., get_category_display)
-    final String? categoryDisplay;
-    String id;
-    String title;
-    String description;
-    String category;
-    String location;
-    String address;
-    int price;
-    DateTime date;
-    String startTime;
-    String endTime;
-    int rating;
-    bool isBooked;
-    String userId;
-    String userName;
-    String? imageUrl;
-    String instagramLink;
-    String mapsLink;
+  final String id;
+  final String title;
+  final String description;
+  final String category;
+  final String? categoryDisplay;
+  final String location;
+  final String address;
+  final int price;
+  final DateTime date;
+  final String startTime;
+  final String endTime;
+  final double rating;
+  final bool isBooked;
+  final String userId;
+  final String userName;
+  final String userPhone;
+  final String whatsappLink;
+  final String formattedPhone;
+  final String? imageUrl;
+  final String instagramLink;
+  final String mapsLink;
+  final bool isOwner;
 
-    Coach({
-        this.categoryDisplay,
-        required this.id,
-        required this.title,
-        required this.description,
-        required this.category,
-        required this.location,
-        required this.address,
-        required this.price,
-        required this.date,
-        required this.startTime,
-        required this.endTime,
-        required this.rating,
-        required this.isBooked,
-        required this.userId,
-        required this.userName,
-        this.imageUrl,
-        required this.instagramLink,
-        required this.mapsLink,
-    });
+  const Coach({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.category,
+    this.categoryDisplay,
+    required this.location,
+    required this.address,
+    required this.price,
+    required this.date,
+    required this.startTime,
+    required this.endTime,
+    required this.rating,
+    required this.isBooked,
+    required this.userId,
+    required this.userName,
+    required this.userPhone,
+    required this.whatsappLink,
+    required this.formattedPhone,
+    this.imageUrl,
+    required this.instagramLink,
+    required this.mapsLink,
+    this.isOwner = false,
+  });
 
-    factory Coach.fromJson(Map<String, dynamic> json) => Coach(
-        categoryDisplay: json["category_display"] as String?,
-        id: json["id"]?.toString() ?? "",
-        title: json["title"] ?? "",
-        description: json["description"] ?? "",
-        category: json["category"] ?? "",
-        location: json["location"] ?? "",
-        address: json["address"] ?? "",
-        price: _parseInt(json["price"]),
-        date: json["date"] != null ? DateTime.parse(json["date"]) : DateTime.now(),
-        startTime: json["startTime"] ?? json["start_time"] ?? "",
-        endTime: json["endTime"] ?? json["end_time"] ?? "",
-        rating: _parseInt(json["rating"]),
-        isBooked: json["isBooked"] ?? json["is_booked"] ?? false,
-        userId: json["user_id"]?.toString() ?? "",
-        userName: json["user_name"] ?? "",
-        imageUrl: json["image_url"],
-        instagramLink: json["instagram_link"] ?? "",
-        mapsLink: json["mapsLink"] ?? json["maps_link"] ?? "",
+  factory Coach.fromJson(Map<String, dynamic> json) {
+    return Coach(
+      id: (json['id'] ?? '').toString(),
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      category: json['category'] ?? '',
+      categoryDisplay: json['category_display'],
+      location: json['location'] ?? '',
+      address: json['address'] ?? '',
+      price: _parseInt(json['price']),
+      date: json['date'] != null
+          ? DateTime.parse(json['date'])
+          : DateTime.now(),
+      startTime: json['startTime'] ?? json['start_time'] ?? '',
+      endTime: json['endTime'] ?? json['end_time'] ?? '',
+      rating: _parseDouble(json['rating']),
+      isBooked: json['isBooked'] ?? json['is_booked'] ?? false,
+      userId: (json['user_id'] ?? '').toString(),
+      userName: json['user_name'] ?? '',
+      userPhone:
+          (json['user_phone'] ?? json['phone'] ?? json['contact_phone'] ?? '')
+              .toString(),
+      whatsappLink: (json['whatsapp_link'] ??
+              json['whatsappLink'] ??
+              json['whatsapp'] ??
+              '')
+          .toString(),
+      formattedPhone:
+          (json['formatted_phone'] ?? json['formattedPhone'] ?? '').toString(),
+      imageUrl: json['image_url'] ?? json['imageUrl'],
+      instagramLink:
+          (json['instagram_link'] ?? json['instagramLink'] ?? json['instagram'] ?? '')
+              .toString(),
+      mapsLink: (json['mapsLink'] ??
+              json['maps_link'] ??
+              json['maps'] ??
+              json['google_maps_link'] ??
+              '')
+          .toString(),
+      isOwner: json['is_owner'] == true || json['isOwner'] == true,
     );
+  }
 
-    Map<String, dynamic> toJson() => {
-        "id": id,
-        "title": title,
-        "description": description,
-        "category": category,
-        "location": location,
-        "address": address,
-        "price": price,
-        "date": "${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}",
-        "startTime": startTime,
-        "endTime": endTime,
-        "rating": rating,
-        "isBooked": isBooked,
-        "user_id": userId,
-        "user_name": userName,
-        "image_url": imageUrl,
-        "instagram_link": instagramLink,
-        "mapsLink": mapsLink,
-    };
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'category': category,
+        'category_display': categoryDisplay,
+        'location': location,
+        'address': address,
+        'price': price,
+        'date':
+            '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+        'startTime': startTime,
+        'endTime': endTime,
+        'rating': rating,
+        'isBooked': isBooked,
+        'user_id': userId,
+        'user_name': userName,
+        'user_phone': userPhone,
+        'whatsapp_link': whatsappLink,
+        'formatted_phone': formattedPhone,
+        'image_url': imageUrl,
+        'instagram_link': instagramLink,
+        'mapsLink': mapsLink,
+        'is_owner': isOwner,
+      };
+
+  Coach copyWith({
+    String? title,
+    String? description,
+    String? category,
+    String? location,
+    String? address,
+    int? price,
+    DateTime? date,
+    String? startTime,
+    String? endTime,
+    double? rating,
+    bool? isBooked,
+    String? userId,
+    String? userName,
+    String? userPhone,
+    String? whatsappLink,
+    String? formattedPhone,
+    String? imageUrl,
+    String? instagramLink,
+    String? mapsLink,
+    bool? isOwner,
+  }) {
+    return Coach(
+      id: id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      categoryDisplay: categoryDisplay,
+      location: location ?? this.location,
+      address: address ?? this.address,
+      price: price ?? this.price,
+      date: date ?? this.date,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      rating: rating ?? this.rating,
+      isBooked: isBooked ?? this.isBooked,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userPhone: userPhone ?? this.userPhone,
+      whatsappLink: whatsappLink ?? this.whatsappLink,
+      formattedPhone: formattedPhone ?? this.formattedPhone,
+      imageUrl: imageUrl ?? this.imageUrl,
+      instagramLink: instagramLink ?? this.instagramLink,
+      mapsLink: mapsLink ?? this.mapsLink,
+      isOwner: isOwner ?? this.isOwner,
+    );
+  }
 }
 
 int _parseInt(dynamic value) {
@@ -98,3 +179,11 @@ int _parseInt(dynamic value) {
   if (value is double) return value.toInt();
   return int.tryParse(value.toString()) ?? 0;
 }
+
+double _parseDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  return double.tryParse(value.toString()) ?? 0.0;
+}
+typedef ProductEntry = Coach;
