@@ -2,6 +2,23 @@ import 'dart:convert';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court_models.dart';
 
+class CourtAvailability {
+  final bool available;
+  final bool canManage;
+
+  CourtAvailability({
+    required this.available,
+    required this.canManage,
+  });
+
+  factory CourtAvailability.fromJson(Map<dynamic, dynamic> json) {
+    return CourtAvailability(
+      available: json['available'] == true,
+      canManage: json['can_manage'] == true,
+    );
+  }
+}
+
 class CourtApiHelper {
   final CookieRequest request;
 
@@ -104,18 +121,51 @@ class CourtApiHelper {
     }
   }
 
-  Future<bool> checkAvailability(int id, String dateStr) async {
+  Future<CourtAvailability> fetchAvailabilityStatus(int id, String dateStr) async {
     try {
       final response = await request.get(
-        _buildUrl('/court/api/court/$id/availability/?date=$dateStr'),
+        _buildUrl('/court/api/court/$id/availability/?date=${Uri.encodeComponent(dateStr)}'),
       );
-      
-      if (response != null && response is Map) {
+
+      if (response is Map) {
+        return CourtAvailability.fromJson(response);
+      }
+      throw Exception("Format respon availability tidak valid");
+    } catch (e) {
+      throw Exception("Gagal memuat status ketersediaan: $e");
+    }
+  }
+
+  Future<bool> checkAvailability(int id, String dateStr) async {
+    final status = await fetchAvailabilityStatus(id, dateStr);
+    return status.available;
+  }
+
+  Future<bool> setAvailability(int id, {required String dateStr, required bool isAvailable}) async {
+    final csrf = request.cookies['csrftoken']?.value;
+    if (csrf != null && csrf.isNotEmpty) {
+      request.headers['X-CSRFToken'] = csrf;
+    }
+    try {
+      final response = await request.postJson(
+        _buildUrl('/court/api/court/$id/availability/set/'),
+        jsonEncode({
+          "date": dateStr,
+          "is_available": isAvailable,
+        }),
+      );
+
+      if (response is Map && response['success'] == true) {
         return response['available'] == true;
       }
-      return false;
+      final message = response is Map ? response['error'] ?? response['message'] : null;
+      throw Exception(message ?? "Gagal memperbarui status ketersediaan");
     } catch (e) {
-      return false; 
+      throw Exception("Gagal memperbarui status ketersediaan: $e");
+    } finally {
+      if (csrf != null) {
+        request.headers.remove('X-CSRFToken');
+      }
     }
   }
 
