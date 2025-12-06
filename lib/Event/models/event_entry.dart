@@ -8,7 +8,7 @@ String eventEntryToJson(List<EventEntry> data) =>
     json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
 
 class EventEntry {
-  int id;
+  String id;
   String name;
   String sportType;
   String description;
@@ -54,14 +54,14 @@ class EventEntry {
 
   factory EventEntry.fromJson(Map<String, dynamic> json) {
     final rawPhotoUrl = json["photo_url"] ?? "";
-    final resolvedPhotoUrl = rawPhotoUrl.startsWith("http")
+    final resolvedPhotoUrl = (rawPhotoUrl.startsWith("http") || rawPhotoUrl.startsWith("data:"))
         ? rawPhotoUrl
         : rawPhotoUrl.isNotEmpty
             ? "$baseUrl$rawPhotoUrl"
             : "";
 
     return EventEntry(
-      id: json["id"] ?? 0,
+      id: (json["id"] ?? "").toString(),
       name: json["name"] ?? "",
       sportType: json["sport_type"] ?? "",
       description: json["description"] ?? "",
@@ -74,7 +74,7 @@ class EventEntry {
       photoUrl: resolvedPhotoUrl,
       status: json["status"] ?? "",
       category: json["category"] ?? "",
-      organizerId: json["organizer_id"] ?? 0,
+      organizerId: _asInt(json["organizer_id"]),
       organizerName: json["organizer_name"] ??
           json["organizer"] ??
           "",
@@ -106,6 +106,13 @@ class EventEntry {
         "status": status,
         "category": category,
       };
+}
+
+int _asInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
 }
 
 class EventSchedule {

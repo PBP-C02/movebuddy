@@ -14,24 +14,16 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 50,
-            offset: const Offset(0, 22),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Material(
-        color: Colors.transparent,
+        color: Colors.white,
+        elevation: 4,
+        borderRadius: BorderRadius.circular(22),
+        shadowColor: Colors.black.withOpacity(0.08),
         child: InkWell(
+          borderRadius: BorderRadius.circular(22),
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -45,18 +37,66 @@ class EventCard extends StatelessWidget {
   }
 
   Widget _buildImage() {
+    final isAvailable = event.status.toLowerCase() == 'available';
+    final statusColor = isAvailable ? const Color(0xFFDFF5E0) : const Color(0xFFFFE6E3);
+    final statusTextColor = isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F);
+
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: event.photoUrl.isNotEmpty
-            ? Image.network(
-                event.photoUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-              )
-            : _buildPlaceholder(),
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(22),
+        topRight: Radius.circular(22),
       ),
+      child: Stack(
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: _buildPhotoContent(),
+          ),
+          Positioned(
+            top: 12,
+            left: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: statusColor,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                isAvailable ? "Available" : "Full",
+                style: TextStyle(
+                  color: statusTextColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoContent() {
+    if (event.photoUrl.isEmpty) return _buildPlaceholder();
+
+    if (event.photoUrl.startsWith('data:image')) {
+      try {
+        final data = Uri.parse(event.photoUrl).data;
+        if (data != null) {
+          return Image.memory(
+            data.contentAsBytes(),
+            fit: BoxFit.cover,
+          );
+        }
+      } catch (_) {
+        return _buildPlaceholder();
+      }
+    }
+
+    return Image.network(
+      event.photoUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
     );
   }
 
@@ -74,214 +114,82 @@ class EventCard extends StatelessWidget {
 
   Widget _buildContent(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildBadges(),
-          const SizedBox(height: 12),
           Row(
             children: [
-              Text(
-                EventHelpers.getSportIcon(event.sportType),
-                style: const TextStyle(fontSize: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF3FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.sports_soccer, size: 16, color: Color(0xFF5A6CEA)),
+                    const SizedBox(width: 6),
+                    Text(EventHelpers.getSportDisplayName(event.sportType), style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8),
+              const Spacer(),
+              const Icon(Icons.star, size: 18, color: Colors.amber),
+              const SizedBox(width: 4),
+              Text(
+                EventHelpers.formatRating(double.tryParse(event.rating) ?? 0),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            event.name,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.location_on, size: 18, color: Color(0xFF64748B)),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  event.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                    color: Color(0xFF0F172A),
-                  ),
-                  maxLines: 2,
+                  event.city,
+                  style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          _buildInfo('Sport', EventHelpers.getSportDisplayName(event.sportType)),
-          const SizedBox(height: 4),
-          _buildInfo('Location', event.city),
-          const SizedBox(height: 8),
-          _buildRating(),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      EventHelpers.formatPrice(double.parse(event.entryPrice)),
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const Text(
-                      'entry fee',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF94A3B8),
-                      ),
-                    ),
-                  ],
-                ),
+          const SizedBox(height: 12),
+          Text(
+            "${EventHelpers.formatPrice(double.tryParse(event.entryPrice) ?? 0)} / event",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E2E2E),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              SizedBox(
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: onTap,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF84CC16),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'View Detail',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ),
+              onPressed: onTap,
+              child: const Text(
+                "View Detail",
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
               ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBadges() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: event.status == 'available'
-                ? const Color(0xFFCBED98).withOpacity(0.2)
-                : Colors.red.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: event.status == 'available'
-                  ? const Color(0xFFCBED98)
-                  : Colors.red,
-            ),
-          ),
-          child: Text(
-            event.status == 'available' ? 'AVAILABLE' : 'FULL',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.8,
-              color: event.status == 'available'
-                  ? const Color(0xFF10B981)
-                  : Colors.red[700],
-            ),
-          ),
-        ),
-        if (event.isRegistered)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue),
-            ),
-            child: Text(
-              'REGISTERED',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.8,
-                color: Colors.blue[700],
-              ),
-            ),
-          ),
-        if (event.isOrganizer)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange),
-            ),
-            child: Text(
-              'YOUR EVENT',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.8,
-                color: Colors.orange[700],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildInfo(String label, String value) {
-    return Row(
-      children: [
-        Text(
-          '$label: ',
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF64748B),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF0F172A),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRating() {
-    final rating = double.parse(event.rating);
-    return Row(
-      children: [
-        ...List.generate(5, (index) {
-          return Icon(
-            Icons.star,
-            size: 16,
-            color: index < rating.floor()
-                ? Colors.amber
-                : const Color(0xFFE2E8F0),
-          );
-        }),
-        const SizedBox(width: 8),
-        Text(
-          '${EventHelpers.formatRating(rating)} / 5.0',
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF64748B),
-          ),
-        ),
-      ],
-    );
-  }
 }

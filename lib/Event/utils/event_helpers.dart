@@ -1,6 +1,13 @@
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 class EventHelpers {
+  static Future<void>? _localeFuture;
+
+  static Future<void> ensureLocaleInitialized() {
+    return _localeFuture ??= initializeDateFormatting('id_ID', null);
+  }
+
   static String formatPrice(double price) {
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
@@ -15,11 +22,19 @@ class EventHelpers {
   }
 
   static String formatDate(DateTime date) {
-    return DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
+    try {
+      return DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
+    } catch (_) {
+      return DateFormat('yyyy-MM-dd').format(date);
+    }
   }
 
   static String formatDateShort(DateTime date) {
-    return DateFormat('d MMM yyyy', 'id_ID').format(date);
+    try {
+      return DateFormat('d MMM yyyy', 'id_ID').format(date);
+    } catch (_) {
+      return DateFormat('yyyy-MM-dd').format(date);
+    }
   }
 
   static String getSportIcon(String sportType) {

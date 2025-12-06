@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Event/utils/event_helpers.dart';
@@ -27,7 +29,26 @@ class _AddEventFormState extends State<AddEventForm> {
   String _category = "category 1";
   String _status = "available";
 
+  final TextEditingController _photoUrlController = TextEditingController();
+  Uint8List? _uploadedImageBytes;
+  String? _uploadedImageDataUrl;
+  final ImagePicker _imagePicker = ImagePicker();
+
   List<DateTime> selectedDates = [];
+
+  @override
+  void dispose() {
+    _photoUrlController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    EventHelpers.ensureLocaleInitialized().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   Future<void> selectDates() async {
     final DateTime? picked = await showDatePicker(
@@ -39,7 +60,7 @@ class _AddEventFormState extends State<AddEventForm> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF84CC16),
+              primary: Color(0xFF8BC34A),
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
@@ -55,277 +76,376 @@ class _AddEventFormState extends State<AddEventForm> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final request = context.watch<CookieRequest>();
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        imageQuality: 85,
+      );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'CREATE EVENT',
-          style: TextStyle(
-            letterSpacing: 2,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+      if (pickedFile == null) return;
+
+      final bytes = await pickedFile.readAsBytes();
+      final mimeType = _detectMimeType(pickedFile.path);
+      final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+
+      setState(() {
+        _uploadedImageBytes = bytes;
+        _uploadedImageDataUrl = dataUrl;
+      });
+    } catch (e) {
+      _showSnackBar('Failed to pick image: $e', isError: true);
+    }
+  }
+
+  String _detectMimeType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
+  }
+
+  Widget _buildPhotoPreview() {
+    final url = _photoUrlController.text.trim();
+
+    if (url.startsWith('data:image')) {
+      try {
+        final data = Uri.parse(url).data;
+        if (data != null) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.memory(
+                data.contentAsBytes(),
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        }
+      } catch (_) {
+        // Fallback to generic preview below
+      }
+    }
+
+    if (url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: const Color(0xFFF1F5F9),
+              child: const Center(
+                child: Icon(Icons.broken_image_outlined, color: Color(0xFF94A3B8), size: 40),
+              ),
+            ),
           ),
         ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF84CC16),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildCard(
-                'Basic Information',
-                Icons.info_outline,
-                Column(
-                  children: [
-                    _buildTextField(
-                      label: 'Event Name',
-                      hint: 'e.g., Weekend Soccer Match',
-                      onChanged: (value) => setState(() => _name = value),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDropdown(
-                      label: 'Sport Type',
-                      value: _sportType,
-                      items: EventHelpers.sportTypes.map((sport) {
-                        return DropdownMenuItem(
-                          value: sport['value'],
-                          child: Row(
-                            children: [
-                              Text(EventHelpers.getSportIcon(sport['value']!), style: const TextStyle(fontSize: 20)),
-                              const SizedBox(width: 8),
-                              Text(sport['label']!),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (value) => setState(() => _sportType = value!),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'Description',
-                      hint: 'Tell us about your event...',
-                      maxLines: 3,
-                      onChanged: (value) => setState(() => _description = value),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildCard(
-                'Location',
-                Icons.location_on,
-                Column(
-                  children: [
-                    _buildDropdown(
-                      label: 'City',
-                      value: _city.isEmpty ? null : _city,
-                      items: EventHelpers.cities.map((city) {
-                        return DropdownMenuItem(value: city, child: Text(city));
-                      }).toList(),
-                      onChanged: (value) => setState(() => _city = value!),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'Full Address',
-                      hint: 'Complete address with details',
-                      maxLines: 2,
-                      onChanged: (value) => setState(() => _fullAddress = value),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'Google Maps Link (optional)',
-                      hint: 'https://maps.google.com/...',
-                      onChanged: (value) => setState(() => _googleMapsLink = value),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildCard(
-                'Pricing & Details',
-                Icons.attach_money,
-                Column(
-                  children: [
-                    _buildTextField(
-                      label: 'Entry Price (IDR)',
-                      hint: '50000',
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) => setState(() => _entryPrice = value),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'Activities (comma separated)',
-                      hint: 'e.g., Basketball court, Shower, Locker',
-                      onChanged: (value) => setState(() => _activities = value),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'Rating (0-5)',
-                      hint: '5',
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) => setState(() => _rating = value),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildCard(
-                'Available Dates',
-                Icons.calendar_today,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Date'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF84CC16),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: selectDates,
-                    ),
-                    if (selectedDates.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: selectedDates.map((date) {
-                          return Chip(
-                            label: Text(EventHelpers.formatDateShort(date)),
-                            deleteIcon: const Icon(Icons.close, size: 18),
-                            onDeleted: () {
-                              setState(() => selectedDates.remove(date));
-                            },
-                            backgroundColor: const Color(0xFFF1F5F9),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF84CC16),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      if (_city.isEmpty) {
-                        _showSnackBar('Please select a city', isError: true);
-                        return;
-                      }
-                      if (selectedDates.isEmpty) {
-                        _showSnackBar('Please add at least one date', isError: true);
-                        return;
-                      }
+      );
+    }
 
-                      final scheduleDates = selectedDates.map((date) {
-                        return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-                      }).toList();
-
-                      try {
-                        final response = await request.postJson(
-                          "$baseUrl/event/json/create/",
-                          jsonEncode({
-                            'name': _name,
-                            'sport_type': _sportType,
-                            'description': _description,
-                            'city': _city,
-                            'full_address': _fullAddress,
-                            'entry_price': _entryPrice,
-                            'activities': _activities,
-                            'rating': _rating,
-                            'google_maps_link': _googleMapsLink,
-                            'category': _category,
-                            'status': _status,
-                            'schedule_dates': scheduleDates,
-                          }),
-                        );
-
-                        if (context.mounted) {
-                          if (response['success'] == true) {
-                            _showSnackBar('Event created successfully!');
-                            Navigator.pop(context, true);
-                          } else {
-                            _showSnackBar(response['message'] ?? 'Failed', isError: true);
-                          }
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          _showSnackBar('Error: $e', isError: true);
-                        }
-                      }
-                    }
-                  },
-                  child: const Text(
-                    'CREATE EVENT',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 100),
-            ],
+    if (_uploadedImageBytes != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Image.memory(
+            _uploadedImageBytes!,
+            fit: BoxFit.cover,
           ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 160,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Center(
+        child: Text(
+          'Photo preview will appear here',
+          style: TextStyle(color: Color(0xFF94A3B8)),
         ),
       ),
     );
   }
 
-  Widget _buildCard(String title, IconData icon, Widget content) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 40,
-            offset: const Offset(0, 16),
-          ),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5F9),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text(
+          "Add Event",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: const Color(0xFF84CC16), size: 24),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
+              ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Lengkapi detail event",
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    label: 'Nama Event',
+                    hint: 'Weekend Soccer Match',
+                    onChanged: (value) => setState(() => _name = value),
+                    validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDropdown(
+                    label: 'Jenis Olahraga',
+                    value: _sportType,
+                    items: EventHelpers.sportTypes.map((sport) {
+                      return DropdownMenuItem(
+                        value: sport['value'],
+                        child: Text(sport['label'] ?? ''),
+                      );
+                    }).toList(),
+                    onChanged: (value) => setState(() => _sportType = value!),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField(
+                    label: 'Deskripsi',
+                    hint: 'Ceritakan event kamu...',
+                    maxLines: 3,
+                    onChanged: (value) => setState(() => _description = value),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    "Foto Event",
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    label: 'Link Gambar (opsional)',
+                    hint: 'https://contoh.com/event.jpg',
+                    keyboardType: TextInputType.url,
+                    controller: _photoUrlController,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.upload),
+                    label: const Text('Upload Photo'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8BC34A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      elevation: 0,
+                    ),
+                    onPressed: _pickImage,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildPhotoPreview(),
+                  const SizedBox(height: 6),
+                  Text(
+                    _photoUrlController.text.trim().isNotEmpty
+                        ? 'Preview memakai link di atas. Kosongkan jika ingin memakai foto upload.'
+                        : _uploadedImageBytes != null
+                            ? 'Foto upload akan dikirim sebagai data URL.'
+                            : 'Tempel link atau upload dari perangkat.',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    "Lokasi",
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDropdown(
+                    label: 'Kota',
+                    value: _city.isEmpty ? null : _city,
+                    items: EventHelpers.cities
+                        .map((city) => DropdownMenuItem(value: city, child: Text(city)))
+                        .toList(),
+                    onChanged: (value) => setState(() => _city = value ?? ""),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField(
+                    label: 'Alamat Lengkap',
+                    hint: 'Tuliskan alamat detail',
+                    maxLines: 2,
+                    onChanged: (value) => setState(() => _fullAddress = value),
+                    validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField(
+                    label: 'Link Google Maps (opsional)',
+                    hint: 'https://maps.google.com/...',
+                    onChanged: (value) => setState(() => _googleMapsLink = value),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    "Harga & Detail",
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    label: 'Harga Tiket (IDR)',
+                    hint: '50000',
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) => setState(() => _entryPrice = value),
+                    validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField(
+                    label: 'Aktivitas / Fasilitas (pisahkan koma)',
+                    hint: 'Basket court, Shower, Locker',
+                    onChanged: (value) => setState(() => _activities = value),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTextField(
+                    label: 'Rating (0-5)',
+                    hint: '5',
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) => setState(() => _rating = value),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    "Tanggal Tersedia",
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah Tanggal'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8BC34A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      elevation: 0,
+                    ),
+                    onPressed: selectDates,
+                  ),
+                  if (selectedDates.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: selectedDates.map((date) {
+                        return Chip(
+                          label: Text(EventHelpers.formatDateShort(date)),
+                          deleteIcon: const Icon(Icons.close, size: 18),
+                          onDeleted: () {
+                            setState(() => selectedDates.remove(date));
+                          },
+                          backgroundColor: const Color(0xFFF1F5F9),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 54,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                          if (_city.isEmpty) {
+                            _showSnackBar('Pilih kota terlebih dahulu', isError: true);
+                            return;
+                          }
+                          if (selectedDates.isEmpty) {
+                            _showSnackBar('Tambah minimal satu tanggal', isError: true);
+                            return;
+                          }
+
+                          final scheduleDates = selectedDates.map((date) {
+                            return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                          }).toList();
+
+                          final photoToSend = _photoUrlController.text.trim().isNotEmpty
+                              ? _photoUrlController.text.trim()
+                              : (_uploadedImageDataUrl ?? "");
+
+                          try {
+                            final response = await request.postJson(
+                              "$baseUrl/event/json/create/",
+                              jsonEncode({
+                                'name': _name,
+                                'sport_type': _sportType,
+                                'description': _description,
+                                'city': _city,
+                                'full_address': _fullAddress,
+                                'entry_price': _entryPrice,
+                                'activities': _activities,
+                                'rating': _rating,
+                                'google_maps_link': _googleMapsLink,
+                                'category': _category,
+                                'status': _status,
+                                'schedule_dates': scheduleDates,
+                                'photo_url': photoToSend,
+                              }),
+                            );
+
+                            if (context.mounted) {
+                              if (response['success'] == true) {
+                                _showSnackBar('Event created successfully!');
+                                Navigator.pop(context, true);
+                              } else {
+                                _showSnackBar(response['message'] ?? 'Failed', isError: true);
+                              }
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              _showSnackBar('Error: $e', isError: true);
+                            }
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF8BC34A),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text(
+                        "Simpan Event",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
-          content,
-        ],
+        ),
       ),
     );
   }
@@ -335,28 +455,13 @@ class _AddEventFormState extends State<AddEventForm> {
     required String hint,
     int maxLines = 1,
     TextInputType? keyboardType,
+    TextEditingController? controller,
     required Function(String) onChanged,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        filled: true,
-        fillColor: const Color(0xFFF8FAFC),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF84CC16), width: 2),
-        ),
-      ),
+      controller: controller,
+      decoration: _inputDecoration(label, hint: hint),
       maxLines: maxLines,
       keyboardType: keyboardType,
       onChanged: onChanged,
@@ -372,25 +477,23 @@ class _AddEventFormState extends State<AddEventForm> {
   }) {
     return DropdownButtonFormField<String>(
       value: value,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: const Color(0xFFF8FAFC),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF84CC16), width: 2),
-        ),
-      ),
+      decoration: _inputDecoration(label),
       items: items,
       onChanged: onChanged,
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: const Color(0xFFF7F8FA),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
     );
   }
 
@@ -398,7 +501,7 @@ class _AddEventFormState extends State<AddEventForm> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : const Color(0xFF84CC16),
+        backgroundColor: isError ? Colors.red : const Color(0xFF8BC34A),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
