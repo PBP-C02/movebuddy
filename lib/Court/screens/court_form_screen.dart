@@ -7,10 +7,10 @@ import '../helpers/court_api_helper.dart';
 class CourtFormScreen extends StatefulWidget {
   final Court? court; // Jika null = Add Mode, Jika ada = Edit Mode
 
-  const CourtFormScreen({Key? key, this.court}) : super(key: key);
+  const CourtFormScreen({super.key, this.court});
 
   @override
-  _CourtFormScreenState createState() => _CourtFormScreenState();
+  State<CourtFormScreen> createState() => _CourtFormScreenState();
 }
 
 class _CourtFormScreenState extends State<CourtFormScreen> {
@@ -172,7 +172,7 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -195,7 +195,7 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _selectedSportType,
+                    initialValue: _selectedSportType,
                     items: _sportLabels.entries
                         .map((entry) => DropdownMenuItem(
                               value: entry.key,
@@ -243,25 +243,25 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _addressController,
-                decoration: _inputDecoration("Alamat Lengkap"),
-                maxLines: 2,
-                validator: (v) => v == null || v.trim().isEmpty ? "Harus diisi" : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _mapLinkController,
-                decoration: _inputDecoration(
-                  "Google Maps link (opsional)",
-                  hint: "https://maps.google.com/?q=-6.2,106.8",
-                ),
-                keyboardType: TextInputType.url,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _phoneController,
-                decoration: _inputDecoration("No. HP Pemilik"),
-                keyboardType: TextInputType.phone,
-                validator: (v) {
+                    decoration: _inputDecoration("Alamat Lengkap"),
+                    maxLines: 2,
+                    validator: (v) => v == null || v.trim().isEmpty ? "Harus diisi" : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _mapLinkController,
+                    decoration: _inputDecoration(
+                      "Google Maps link (opsional)",
+                      hint: "https://maps.google.com/?q=-6.2,106.8",
+                    ),
+                    keyboardType: TextInputType.url,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: _inputDecoration("No. HP Pemilik"),
+                    keyboardType: TextInputType.phone,
+                    validator: (v) {
                       final digits = _sanitizePhone(v ?? '');
                       if (digits.isEmpty) return "Harus diisi";
                       if (digits.length < 8 || digits.length > 20) return "Gunakan 8-20 digit angka";
@@ -270,29 +270,29 @@ class _CourtFormScreenState extends State<CourtFormScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
-                controller: _facilitiesController,
-                decoration: _inputDecoration("Fasilitas (pisahkan koma)"),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _ratingController,
-                decoration: _inputDecoration("Rating (opsional)", hint: "0 - 5"),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) {
-                  final trimmed = v?.trim() ?? "";
-                  if (trimmed.isEmpty) return null;
-                  final parsed = double.tryParse(trimmed);
-                  if (parsed == null) return "Masukkan angka";
-                  if (parsed < 0 || parsed > 5) return "0 - 5";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descController,
-                decoration: _inputDecoration("Deskripsi (opsional)"),
-                maxLines: 3,
-              ),
+                    controller: _facilitiesController,
+                    decoration: _inputDecoration("Fasilitas (pisahkan koma)"),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _ratingController,
+                    decoration: _inputDecoration("Rating (opsional)", hint: "0 - 5"),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) {
+                      final trimmed = v?.trim() ?? "";
+                      if (trimmed.isEmpty) return null;
+                      final parsed = double.tryParse(trimmed);
+                      if (parsed == null) return "Masukkan angka";
+                      if (parsed < 0 || parsed > 5) return "0 - 5";
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _descController,
+                    decoration: _inputDecoration("Deskripsi (opsional)"),
+                    maxLines: 3,
+                  ),
                   const SizedBox(height: 20),
                   SizedBox(
                     height: 54,

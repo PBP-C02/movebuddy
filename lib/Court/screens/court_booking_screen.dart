@@ -9,10 +9,10 @@ class CourtBookingScreen extends StatefulWidget {
   final DateTime preSelectedDate;
 
   const CourtBookingScreen({
-    Key? key,
+    super.key,
     required this.courtId,
     required this.preSelectedDate,
-  }) : super(key: key);
+  });
 
   @override
   State<CourtBookingScreen> createState() => _CourtBookingScreenState();
@@ -22,12 +22,16 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
   bool _isLoading = false;
 
   Future<void> _openWhatsapp(String url) async {
+    final messenger = ScaffoldMessenger.of(context);
     final uri = Uri.tryParse(url);
     if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
+    final canOpen = await canLaunchUrl(uri);
+    if (!mounted) return;
+
+    if (canOpen) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text("Tidak bisa membuka WhatsApp di perangkat ini"),
         ),
@@ -66,6 +70,7 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
 
         if (waLink != null) {
           await _openWhatsapp(waLink);
+          if (!mounted) return;
         }
 
         // Kembali ke halaman list (pop 2x: dari booking -> detail -> list)
@@ -125,7 +130,7 @@ class _CourtBookingScreenState extends State<CourtBookingScreen> {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 18,
                       offset: const Offset(0, 8),
                     ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court_models.dart';
 
@@ -81,9 +82,7 @@ class CourtApiHelper {
       
       String queryString = "";
       if (params.isNotEmpty) {
-        queryString = "?" + params.entries
-            .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-            .join('&');
+        queryString = "?${params.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}";
       }
 
       final url = _buildUrl('/court/api/court/search/$queryString');
@@ -221,7 +220,7 @@ class CourtApiHelper {
 
       return response is Map && response['success'] == true;
     } catch (e) {
-      print("Error Add Court: $e");
+      debugPrint("Error Add Court: $e");
       return false;
     }
   }
@@ -235,7 +234,7 @@ class CourtApiHelper {
 
       return response is Map && response['success'] == true;
     } catch (e) {
-       print("Error Edit Court: $e");
+       debugPrint("Error Edit Court: $e");
        return false;
     }
   }
