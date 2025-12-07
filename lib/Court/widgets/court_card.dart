@@ -7,12 +7,11 @@ class CourtCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const CourtCard({super.key, required this.court, required this.onTap});
-
   @override
   Widget build(BuildContext context) {
     final imageUrl = CourtApiHelper.resolveImageUrl(
       court.imageUrl,
-      placeholder: "https://via.placeholder.com/150",
+      placeholder: "https://u7.uidownload.com/vector/866/424/vector-flat-icon-in-black-and-white-football-field-vector-ai-eps.jpg",
     );
 
     final distanceText =

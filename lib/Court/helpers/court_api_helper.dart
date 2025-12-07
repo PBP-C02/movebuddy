@@ -25,14 +25,14 @@ class CourtApiHelper {
 
   // Gunakan 10.0.2.2 untuk Emulator Android
   // Gunakan IP Laptop (misal 192.168.x.x) untuk HP Fisik
-  static const String baseUrl = "http://127.0.0.1:8000";
+  static const String baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/";
 
   CourtApiHelper(this.request);
 
   /// Build a usable image URL from API value (handles absolute/relative/empty).
   static String resolveImageUrl(
     String? rawUrl, {
-    String placeholder = "https://via.placeholder.com/150",
+    String placeholder = "https://u7.uidownload.com/vector/866/424/vector-flat-icon-in-black-and-white-football-field-vector-ai-eps.jpg",
   }) {
     if (rawUrl == null) return placeholder;
     final trimmed = rawUrl.trim();
