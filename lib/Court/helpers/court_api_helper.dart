@@ -25,7 +25,7 @@ class CourtApiHelper {
 
   // Gunakan 10.0.2.2 untuk Emulator Android
   // Gunakan IP Laptop (misal 192.168.x.x) untuk HP Fisik
-  static const String baseUrl = "http://127.0.0.1:8000";
+  static const String baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/";
 
   CourtApiHelper(this.request);
 
