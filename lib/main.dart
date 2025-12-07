@@ -65,7 +65,7 @@ class _RootPageState extends State<RootPage> {
   Future<void> checkSession() async {
     final request = context.read<CookieRequest>();
     try {
-      final response = await request.get("$baseUrl/auth_profile/check-session/");
+      final response = await request.get("$baseUrl/check-session/");
 
       if (mounted) {
         if (request.loggedIn || (response is Map && response['status'] == true)) {
