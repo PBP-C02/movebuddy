@@ -32,7 +32,7 @@ class CourtApiHelper {
   /// Build a usable image URL from API value (handles absolute/relative/empty).
   static String resolveImageUrl(
     String? rawUrl, {
-    String placeholder = "https://via.placeholder.com/150",
+    String placeholder = "https://u7.uidownload.com/vector/866/424/vector-flat-icon-in-black-and-white-football-field-vector-ai-eps.jpg",
   }) {
     if (rawUrl == null) return placeholder;
     final trimmed = rawUrl.trim();
