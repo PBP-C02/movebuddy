@@ -58,7 +58,7 @@ class _RootPageState extends State<RootPage> {
   }
 
   void _initUrl() {
-      baseUrl = "http://127.0.0.1:8000";
+      baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id";
 
   }
 
