@@ -81,7 +81,7 @@ class CoachEntryCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Text(
                               coach.rating.toStringAsFixed(1),
-                              style: const TextStyle(
+                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
                               ),
@@ -123,7 +123,8 @@ class CoachEntryCard extends StatelessWidget {
                         _buildPill(
                           icon: Icons.sports_handball,
                           label: coach.category,
-                          color: const Color(0xFF8BC34A),
+                          color: const Color(0xFFB7DC81),
+                          textColor: const Color(0xFF182435),
                         ),
                         _buildPill(
                           icon: Icons.place,
@@ -223,7 +224,9 @@ class CoachEntryCard extends StatelessWidget {
     required IconData icon,
     required String label,
     required Color color,
+    Color? textColor,
   }) {
+    final effectiveText = textColor ?? color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -234,14 +237,14 @@ class CoachEntryCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
+          Icon(icon, size: 14, color: effectiveText),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: color,
+              color: effectiveText,
             ),
           ),
         ],

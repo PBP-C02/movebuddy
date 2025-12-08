@@ -23,11 +23,11 @@ class CoachUpdatePage extends StatefulWidget {
 class _CoachUpdatePageState extends State<CoachUpdatePage> {
   static const String _baseUrl = String.fromEnvironment(
     'COACH_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/coach/',
   );
   static const String _updatePath = String.fromEnvironment(
     'COACH_UPDATE_PATH',
-    defaultValue: '/coach/update-flutter/{id}/',
+    defaultValue: 'update-flutter/{id}/',
   );
 
   final _formKey = GlobalKey<FormState>();
@@ -38,6 +38,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
   final _priceController = TextEditingController();
   final _instagramController = TextEditingController();
   final _mapsController = TextEditingController();
+  final _ratingController = TextEditingController();
 
   DateTime? _selectedDate;
   TimeOfDay? _startTime;
@@ -91,6 +92,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     _priceController.dispose();
     _instagramController.dispose();
     _mapsController.dispose();
+    _ratingController.dispose();
     super.dispose();
   }
 
@@ -112,6 +114,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     _instagramController.text = coach.instagramLink ?? '';
     _mapsController.text = coach.mapsLink;
     _existingImageUrl = coach.imageUrl;
+    _ratingController.text = _rating.toStringAsFixed(1);
   }
 
   TimeOfDay? _parseTime(String value) {
@@ -201,6 +204,27 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
       return;
     }
 
+    final mapsLink = _mapsController.text.trim();
+    if (mapsLink.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Link Google Maps wajib diisi.'),
+        ),
+      );
+      return;
+    }
+
+    final ratingValue = double.tryParse(_ratingController.text.trim());
+    if (ratingValue == null || ratingValue < 0 || ratingValue > 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rating harus angka 0-5.'),
+        ),
+      );
+      return;
+    }
+
+    _rating = ratingValue;
     setState(() => _isSubmitting = true);
     final request = context.read<CookieRequest>();
 
@@ -226,7 +250,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
       'endTime': endStr,
       'rating': _rating.toStringAsFixed(1),
       'instagram_link': _instagramController.text.trim(),
-      'mapsLink': _mapsController.text.trim(),
+      'mapsLink': mapsLink,
     };
 
     if (_imageBase64 != null) {
@@ -272,8 +296,6 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
 
   @override
   Widget build(BuildContext context) {
-    final ratingOptions =
-        List<double>.generate(11, (index) => index * 0.5); // 0.0 - 5.0
     final currentLocation = _locationController.text.trim();
     final locationItems = <String>[
       ..._locationOptions,
@@ -299,7 +321,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     final endLabel = _endTime == null ? 'Jam selesai' : _formatTime(_endTime!);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -309,21 +331,10 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/coach/bg.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned.fill(
-            child: Container(color: Colors.white.withOpacity(0.9)),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Container(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -346,7 +357,9 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                         style:
                             TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
+                      _buildSectionTitle('Informasi Coach'),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _titleController,
                         decoration: _filledDecoration('Judul'),
@@ -379,7 +392,9 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                           }
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
+                      _buildSectionTitle('Lokasi'),
+                      const SizedBox(height: 10),
                       DropdownButtonFormField<String>(
                         value: dropdownLocationValue,
                         decoration: _filledDecoration('Kota'),
@@ -404,6 +419,17 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                             v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
                       ),
                       const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _mapsController,
+                        decoration: _filledDecoration(
+                          'Link Google Maps',
+                          hint: 'https://maps.google.com/...',
+                        ),
+                        keyboardType: TextInputType.url,
+                      ),
+                      const SizedBox(height: 18),
+                      _buildSectionTitle('Jadwal & Harga'),
+                      const SizedBox(height: 10),
                       TextFormField(
                         controller: _priceController,
                         decoration: _filledDecoration(
@@ -477,20 +503,24 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<double>(
-                        value: _rating,
-                        decoration: _filledDecoration('Rating'),
-                        items: ratingOptions
-                            .map(
-                              (r) => DropdownMenuItem(
-                                value: r,
-                                child: Text(r.toStringAsFixed(1)),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _rating = val);
+                      const SizedBox(height: 18),
+                      _buildSectionTitle('Rating & Kontak'),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _ratingController,
+                        decoration: _filledDecoration(
+                          'Rating (0-5)',
+                          hint: 'contoh: 4.5',
+                        ),
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Wajib diisi';
+                          final parsed = double.tryParse(v.trim());
+                          if (parsed == null || parsed < 0 || parsed > 5) {
+                            return 'Masukkan angka 0-5';
+                          }
+                          return null;
                         },
                       ),
                       const SizedBox(height: 12),
@@ -502,66 +532,85 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                         ),
                         keyboardType: TextInputType.url,
                       ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _mapsController,
-                        decoration: _filledDecoration(
-                          'Link Google Maps (opsional)',
-                          hint: 'https://maps.google.com/...',
-                        ),
-                        keyboardType: TextInputType.url,
-                      ),
                       const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: _pickImage,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      _buildSectionTitle('Foto Coach'),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: _pickImage,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          icon: const Icon(Icons.image_outlined, size: 22),
+                          label: Text(
+                            _pickedImage == null && _existingImageUrl == null
+                                ? 'Pilih gambar (opsional)'
+                                : 'Ganti gambar',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
-                        icon: const Icon(Icons.image),
-                        label: Text(
-                          _pickedImage == null && _existingImageUrl == null
-                              ? 'Pilih gambar (opsional)'
-                              : 'Ganti gambar',
-                        ),
                       ),
-                      if (_pickedImage != null || _existingImageUrl != null) ...[
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          height: 220,
+                          width: double.infinity,
+                          color: const Color(0xFFF5F5F5),
                           child: _pickedImage != null
                               ? (kIsWeb && _imageBytes != null
                                   ? Image.memory(
                                       _imageBytes!,
-                                      height: 180,
-                                      width: double.infinity,
                                       fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
                                     )
                                   : Image.file(
                                       File(_pickedImage!.path),
-                                      height: 180,
-                                      width: double.infinity,
                                       fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
                                     ))
-                              : Image.network(
-                                  _existingImageUrl!,
-                                  height: 180,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                    height: 180,
-                                    width: double.infinity,
-                                    color: Colors.grey.shade200,
-                                    alignment: Alignment.center,
-                                    child:
-                                        const Icon(Icons.broken_image, size: 48),
-                                  ),
-                                ),
+                              : (_existingImageUrl != null
+                                  ? Image.network(
+                                      _existingImageUrl!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                        color: Colors.grey.shade200,
+                                        alignment: Alignment.center,
+                                        child: const Icon(
+                                          Icons.broken_image,
+                                          size: 48,
+                                        ),
+                                      ),
+                                    )
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: const [
+                                        Icon(Icons.image_outlined,
+                                            size: 42, color: Colors.grey),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Belum ada gambar',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    )),
                         ),
-                      ],
+                      ),
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
@@ -569,8 +618,8 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                         child: ElevatedButton(
                           onPressed: _isSubmitting ? null : _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8BC34A),
-                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFFB7DC81),
+                            foregroundColor: const Color(0xFF182435),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -581,7 +630,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                                   height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    color: Colors.white,
+                                    color: Color(0xFF182435),
                                   ),
                                 )
                               : const Text(
@@ -595,8 +644,16 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
                 ),
               ),
             ),
-          ),
-        ],
+        ),
+      );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 14,
       ),
     );
   }

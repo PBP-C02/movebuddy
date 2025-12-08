@@ -29,6 +29,9 @@ class Coach {
   final String instagramLink;
   final String mapsLink;
   final bool isOwner;
+  final String? participantId;
+  final String? participantName;
+  final bool bookedByMe;
 
   const Coach({
     required this.id,
@@ -53,9 +56,16 @@ class Coach {
     required this.instagramLink,
     required this.mapsLink,
     this.isOwner = false,
+    this.participantId,
+    this.participantName,
+    this.bookedByMe = false,
   });
 
-  factory Coach.fromJson(Map<String, dynamic> json) {
+  factory Coach.fromJson(Map<String, dynamic> json, {String? currentUserId}) {
+    final pesertaId = json['peserta_id']?.toString();
+    final ownerId = (json['user_id'] ?? '').toString();
+    final isOwnerById =
+        currentUserId != null && ownerId.isNotEmpty && ownerId == currentUserId;
     return Coach(
       id: (json['id'] ?? '').toString(),
       title: json['title'] ?? '',
@@ -72,7 +82,7 @@ class Coach {
       endTime: json['endTime'] ?? json['end_time'] ?? '',
       rating: _parseDouble(json['rating']),
       isBooked: json['isBooked'] ?? json['is_booked'] ?? false,
-      userId: (json['user_id'] ?? '').toString(),
+      userId: ownerId,
       userName: json['user_name'] ?? '',
       userPhone:
           (json['user_phone'] ?? json['phone'] ?? json['contact_phone'] ?? '')
@@ -94,7 +104,15 @@ class Coach {
               json['google_maps_link'] ??
               '')
           .toString(),
-      isOwner: json['is_owner'] == true || json['isOwner'] == true,
+      isOwner: json['is_owner'] == true ||
+          json['isOwner'] == true ||
+          isOwnerById,
+      participantId: pesertaId,
+      participantName: json['peserta_name']?.toString(),
+      bookedByMe: json['booked_by_me'] == true ||
+          json['is_booked_by_me'] == true ||
+          json['bookedByMe'] == true ||
+          (pesertaId != null && currentUserId != null && pesertaId == currentUserId),
     );
   }
 
@@ -122,6 +140,9 @@ class Coach {
         'instagram_link': instagramLink,
         'mapsLink': mapsLink,
         'is_owner': isOwner,
+        'peserta_id': participantId,
+        'peserta_name': participantName,
+        'booked_by_me': bookedByMe,
       };
 
   Coach copyWith({
@@ -145,6 +166,9 @@ class Coach {
     String? instagramLink,
     String? mapsLink,
     bool? isOwner,
+    String? participantId,
+    String? participantName,
+    bool? bookedByMe,
   }) {
     return Coach(
       id: id,
@@ -169,6 +193,9 @@ class Coach {
       instagramLink: instagramLink ?? this.instagramLink,
       mapsLink: mapsLink ?? this.mapsLink,
       isOwner: isOwner ?? this.isOwner,
+      participantId: participantId ?? this.participantId,
+      participantName: participantName ?? this.participantName,
+      bookedByMe: bookedByMe ?? this.bookedByMe,
     );
   }
 }
