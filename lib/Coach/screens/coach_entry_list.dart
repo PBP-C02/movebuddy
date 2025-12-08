@@ -399,6 +399,11 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
       {'label': 'Swimming', 'value': 'swimming'},
     ];
 
+    const sectionLabelStyle = TextStyle(
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF182435),
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
@@ -481,7 +486,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: _openPriceFilterSheet,
+                      onPressed: _openCreateCoach,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFB7DC81),
                         foregroundColor: const Color(0xFF182435),
@@ -494,8 +499,8 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                         ),
                         elevation: 0,
                       ),
-                      icon: const Icon(Icons.filter_alt),
-                      label: Text(priceSummary),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Tambah Coach'),
                     ),
                   ],
                 ),
@@ -505,7 +510,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                   children: [
                     const Text(
                       'Kategori Olahraga',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                      style: sectionLabelStyle,
                     ),
                     Row(
                       children: const [
@@ -557,13 +562,15 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                       ),
                       const Text(
                         'Hanya tampilkan yang tersedia',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF5F6C7B),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 22),
-                const SizedBox(height: 4),
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
@@ -601,7 +608,8 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                           Text(
                             'Menampilkan $_resultCount coach',
                             style: const TextStyle(
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF182435),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -661,7 +669,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _openCreateCoach,
+                    onPressed: _openPriceFilterSheet,
                     style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFB7DC81),
                   foregroundColor: const Color(0xFF182435),
@@ -671,9 +679,16 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                   ),
                   elevation: 0,
                     ),
-                    child: const Text(
-                      'Tambah Coach',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.filter_alt, color: Color(0xFF182435)),
+                        const SizedBox(width: 8),
+                        Text(
+                          priceSummary,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -899,7 +914,8 @@ class _SegmentButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = selected ? const Color(0xFFB7DC81) : Colors.white;
     final border = selected ? const Color(0xFFB7DC81) : Colors.grey.shade300;
-    final textColor = selected ? const Color(0xFF182435) : Colors.grey.shade800;
+    final textColor =
+        selected ? const Color(0xFF182435) : const Color(0xFF3A4A5A);
 
     return InkWell(
       onTap: onTap,
