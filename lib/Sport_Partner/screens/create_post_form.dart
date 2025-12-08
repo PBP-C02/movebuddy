@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:move_buddy/Sport_Partner/constants.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -190,11 +191,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         return;
                       }
 
-                      // Kirim data ke Django (Paket dikirim kurir)
-                      // GANTI URL INI DENGAN URL DEPLOY ATAU LOCALHOST ANDA
-                      // Jangan lupa / di akhir URL jika di urls.py Anda pakai slash
                       final response = await request.postJson(
-                        "http://127.0.0.1:8000/sport_partner/create-post/",
+                        "$baseUrl/sport_partner/create-post/",
                         jsonEncode(<String, String>{
                           'title': _title,
                           'description': _description,
