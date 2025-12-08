@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
@@ -17,14 +18,16 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   // Keep trailing slash and append paths without a leading slash.
   final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/';
-  final Color _accentGreen = const Color(0xFFC7EFA0);
+  final Color _accentGreen = const Color(0xFFA2D94D);
   final Color _textDark = const Color(0xFF2F2F2F);
 
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _kelaminController = TextEditingController();
-  final TextEditingController _tanggalController = TextEditingController();
   final TextEditingController _nomorHpController = TextEditingController();
+  final TextEditingController _tanggalController = TextEditingController();
+
+  String? _gender; // 'L' atau 'P'
+  DateTime? _birthDate;
 
   bool _isEditing = false;
   bool _loading = true;
@@ -41,9 +44,8 @@ class _ProfilePageState extends State<ProfilePage> {
   void dispose() {
     _namaController.dispose();
     _emailController.dispose();
-    _kelaminController.dispose();
-    _tanggalController.dispose();
     _nomorHpController.dispose();
+    _tanggalController.dispose();
     super.dispose();
   }
 
@@ -57,10 +59,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (response['success'] == true) {
         final data = response['data'] as Map<String, dynamic>;
+        final genderCode = (data['kelamin'] ?? '').toString().toUpperCase();
+        final birthDateString = (data['tanggal_lahir'] ?? '').toString();
+        final parsedBirth = DateTime.tryParse(birthDateString);
+
         _namaController.text = (data['nama'] ?? '').toString();
         _emailController.text = (data['email'] ?? '').toString();
-        _kelaminController.text = _genderDisplay((data['kelamin'] ?? '').toString());
-        _tanggalController.text = (data['tanggal_lahir'] ?? '').toString();
+        _gender = (genderCode == 'L' || genderCode == 'P') ? genderCode : null;
+        _birthDate = parsedBirth;
+        _tanggalController.text = parsedBirth != null ? _formatDate(parsedBirth) : birthDateString;
         _nomorHpController.text = (data['nomor_handphone'] ?? '').toString();
       } else {
         _showSnack(response['message'] ?? 'Gagal memuat profil');
@@ -72,37 +79,21 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  String _genderDisplay(String code) {
-    switch (code.toUpperCase()) {
-      case 'L':
-        return 'Laki-laki';
-      case 'P':
-        return 'Perempuan';
-      default:
-        return code;
-    }
-  }
-
-  String? _genderCode(String input) {
-    final text = input.trim().toLowerCase();
-    if (text.startsWith('l')) return 'L';
-    if (text.startsWith('p')) return 'P';
-    return null;
-  }
-
   Future<void> _submitUpdate() async {
     if (_saving) return;
     if (_loading) return;
 
-    final genderCode = _genderCode(_kelaminController.text);
-    if (genderCode == null) {
-      _showSnack('Jenis kelamin harus Laki-laki atau Perempuan');
+    if (_gender == null) {
+      _showSnack('Jenis kelamin harus dipilih');
       return;
     }
 
-    if (_namaController.text.trim().isEmpty ||
-        _tanggalController.text.trim().isEmpty ||
-        _nomorHpController.text.trim().isEmpty) {
+    if (_birthDate == null) {
+      _showSnack('Tanggal lahir harus dipilih');
+      return;
+    }
+
+    if (_namaController.text.trim().isEmpty || _nomorHpController.text.trim().isEmpty) {
       _showSnack('Semua field kecuali email harus diisi');
       return;
     }
@@ -111,15 +102,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final request = context.read<CookieRequest>();
 
     try {
-      final response = await request.postJson(
-        '${baseUrl}profile/api/',
-        {
-          'nama': _namaController.text.trim(),
-          'kelamin': genderCode,
-          'tanggal_lahir': _tanggalController.text.trim(),
-          'nomor_handphone': _nomorHpController.text.trim(),
-        },
-      );
+      final response = await request.postJson('${baseUrl}profile/api/', jsonEncode({
+        'nama': _namaController.text.trim(),
+        'kelamin': _gender,
+        'tanggal_lahir': _formatDate(_birthDate!),
+        'nomor_handphone': _nomorHpController.text.trim(),
+      }));
 
       if (!mounted) return;
 
@@ -149,7 +137,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final request = context.read<CookieRequest>();
 
     try {
-      await request.postJson("${baseUrl}logout/", {});
+      await request.postJson("${baseUrl}logout/", jsonEncode({}));
     } catch (_) {
       // Ignore logout errors; still redirect
     } finally {
@@ -204,7 +192,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 image: const AssetImage('assets/coach/bg.png'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
-                  Colors.white.withOpacity(0.86),
+                  Colors.white.withOpacity(0.9),
                   BlendMode.srcATop,
                 ),
               ),
@@ -222,6 +210,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Card(
                         elevation: 12,
                         shadowColor: Colors.black26,
+                        color: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
@@ -252,18 +241,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                 controller: _emailController,
                                 enabled: false,
                               ),
-                              _buildTextField(
-                                label: 'Jenis Kelamin',
-                                controller: _kelaminController,
-                                enabled: _isEditing,
-                                hint: 'Laki-laki / Perempuan',
-                              ),
-                              _buildTextField(
-                                label: 'Tanggal Lahir',
-                                controller: _tanggalController,
-                                enabled: _isEditing,
-                                hint: 'YYYY-MM-DD',
-                              ),
+                              _buildGenderDropdown(),
+                              _buildDatePickerField(),
                               _buildTextField(
                                 label: 'Nomor Handphone',
                                 controller: _nomorHpController,
@@ -371,7 +350,7 @@ class _ProfilePageState extends State<ProfilePage> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: enabled ? const Color(0xFF8AA73B) : Colors.grey.shade300,
+                  color: enabled ? _accentGreen : Colors.grey.shade300,
                   width: 1.4,
                 ),
               ),
@@ -384,6 +363,157 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  Widget _buildGenderDropdown() {
+    final enabled = _isEditing && !_loading;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Jenis Kelamin',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF4A4A4A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _gender,
+            items: const [
+              DropdownMenuItem(value: 'L', child: Text('Laki-laki')),
+              DropdownMenuItem(value: 'P', child: Text('Perempuan')),
+            ],
+            onChanged: enabled ? (val) => setState(() => _gender = val) : null,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: enabled ? Colors.white : Colors.grey.shade200,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: enabled ? _accentGreen : Colors.grey.shade300,
+                  width: 1.4,
+                ),
+              ),
+            ),
+            isExpanded: true,
+            icon: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: enabled ? Colors.black54 : Colors.grey,
+            ),
+            style: TextStyle(
+              color: enabled ? Colors.black87 : Colors.grey.shade600,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePickerField() {
+    final enabled = _isEditing && !_loading;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tanggal Lahir',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF4A4A4A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: enabled ? _pickBirthDate : null,
+            borderRadius: BorderRadius.circular(12),
+            child: InputDecorator(
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: enabled ? Colors.white : Colors.grey.shade200,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: enabled ? _accentGreen : Colors.grey.shade300,
+                    width: 1.4,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    _tanggalController.text.isNotEmpty
+                        ? _tanggalController.text
+                        : 'Pilih tanggal',
+                    style: TextStyle(
+                      color: enabled ? Colors.black87 : Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.calendar_month,
+                    size: 18,
+                    color: enabled ? Colors.black54 : Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickBirthDate() async {
+    final initialDate = _birthDate ?? DateTime(2000, 1, 1);
+    final today = DateTime.now();
+    final safeInitial =
+        initialDate.isAfter(today) ? today : initialDate;
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: safeInitial,
+      firstDate: DateTime(1900),
+      lastDate: today,
+    );
+
+    if (picked != null) {
+      setState(() {
+        _birthDate = picked;
+        _tanggalController.text = _formatDate(picked);
+      });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 
   Widget _buildHeader(BuildContext context) {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +19,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // Keep trailing slash and ensure paths are appended without a leading slash.
   final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/';
-  final Color _accentGreen = const Color(0xFF8AA73B);
+  final Color _accentGreen = const Color(0xFFA2D94D);
   String? _fullName;
 
   @override
@@ -45,7 +46,7 @@ class _HomePageState extends State<HomePage> {
     final request = context.read<CookieRequest>();
 
     try {
-      await request.postJson('${baseUrl}logout/', {});
+      await request.postJson('${baseUrl}logout/', jsonEncode({}));
     } catch (_) {
       // Ignore logout errors, just redirect to login.
     }
@@ -101,7 +102,7 @@ class _HomePageState extends State<HomePage> {
                 image: const AssetImage('assets/coach/bg.png'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
-                  Colors.white.withOpacity(0.82),
+                  Colors.white.withOpacity(0.9),
                   BlendMode.srcATop,
                 ),
               ),
@@ -169,7 +170,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const ProfilePage()),
-                );
+                ).then((_) => _loadUserName());
               },
               icon: const Icon(Icons.account_circle, color: Colors.white),
               splashRadius: 26,
@@ -189,36 +190,42 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
-        Text(
-          'Hi, $greetingName !!',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-            color: Colors.black87,
+        Center(
+          child: Text(
+            'Hi, $greetingName!',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: Colors.black87,
+            ),
           ),
         ),
         const SizedBox(height: 10),
-        RichText(
-          text: TextSpan(
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: Colors.black54,
-            ),
-            children: [
-              const TextSpan(text: 'Welcome to '),
-              TextSpan(
-                text: 'Move Buddy',
-                style: TextStyle(
-                  color: _accentGreen,
-                  fontWeight: FontWeight.w700,
+        Center(
+          child: RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: Colors.black54,
+              ),
+              children: [
+                const TextSpan(text: 'Welcome to '),
+                TextSpan(
+                  text: 'Move Buddy',
+                  style: TextStyle(
+                    color: _accentGreen,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const TextSpan(
-                text:
-                    ', your one-stop platform to find courts, partners, coaches, and events for your favorite sports.',
-              ),
-            ],
+                const TextSpan(
+                  text:
+                      ', your one-stop platform to find courts, partners, coaches, and events for your favorite sports.',
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 28),
@@ -299,7 +306,7 @@ class _HomePageState extends State<HomePage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _accentGreen,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.black,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -401,7 +408,7 @@ class _HomePageState extends State<HomePage> {
                           MaterialPageRoute(
                             builder: (context) => const ProfilePage(),
                           ),
-                        );
+                        ).then((_) => _loadUserName());
                       },
                     ),
                     _menuTile(
