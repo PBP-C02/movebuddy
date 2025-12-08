@@ -32,6 +32,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       final response = await request.get('$baseUrl/event/json/${widget.eventId}/');
       setState(() {
         event = EventEntry.fromJson(response);
+        selectedScheduleId = null; // clear old selection after refresh
         isLoading = false;
       });
     } catch (e) {
@@ -45,6 +46,16 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 
   Future<void> joinEvent(CookieRequest request) async {
+    if (event?.isOrganizer == true) {
+      _showSnackBar('You cannot join your own event', isError: true);
+      return;
+    }
+
+    if ((event?.status.toLowerCase() ?? '') != 'available') {
+      _showSnackBar('Event is currently unavailable', isError: true);
+      return;
+    }
+
     if (selectedScheduleId == null) {
       _showSnackBar('Please select a date first!', isError: true);
       return;
@@ -221,6 +232,8 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(),
+                  const SizedBox(height: 16),
+                  _buildMetaOverview(),
                   const SizedBox(height: 16),
                   if (event!.description.isNotEmpty) _buildDescription(),
                   if (event!.description.isNotEmpty) const SizedBox(height: 16),
@@ -493,7 +506,109 @@ class _EventDetailPageState extends State<EventDetailPage> {
     );
   }
 
+  Widget _buildMetaOverview() {
+    final isAvailable = event!.status.toLowerCase() == 'available';
+    final statusLabel = isAvailable ? 'Available' : 'Unavailable';
+    final ratingValue = EventHelpers.formatRating(double.tryParse(event!.rating) ?? 0);
+    final createdDate = EventHelpers.formatDateShort(event!.createdAt);
+    final categoryLabel = event!.category.isNotEmpty ? event!.category : 'Uncategorized';
+
+    return _buildCard(
+      'Event Snapshot',
+      Icons.insights,
+      Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.person_outline,
+                  label: 'Organizer',
+                  value: event!.organizerName,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.category_outlined,
+                  label: 'Category',
+                  value: categoryLabel,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.flag_outlined,
+                  label: 'Status',
+                  value: statusLabel,
+                  accent: isAvailable ? const Color(0xFF10B981) : Colors.red,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Created',
+                  value: createdDate,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.location_city_outlined,
+                  label: 'City',
+                  value: event!.city,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.star_rate_rounded,
+                  label: 'Rating',
+                  value: '$ratingValue / 5',
+                  accent: const Color(0xFFF59E0B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.sports_soccer,
+                  label: 'Sport',
+                  value: EventHelpers.getSportDisplayName(event!.sportType),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetaTile(
+                  icon: Icons.payments_outlined,
+                  label: 'Entry Fee',
+                  value: EventHelpers.formatPrice(double.tryParse(event!.entryPrice) ?? 0),
+                  accent: const Color(0xFF84CC16),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSchedules() {
+    final isOrganizer = event!.isOrganizer;
+    final isEventAvailable = event!.status.toLowerCase() == 'available';
+
     return _buildCard(
       'Available Dates',
       Icons.calendar_today,
@@ -501,27 +616,32 @@ class _EventDetailPageState extends State<EventDetailPage> {
         children: event!.schedules!.map((schedule) {
           final isSelected = selectedScheduleId == schedule.id;
           final isRegistered = event!.userSchedules?.contains(schedule.id) ?? false;
+          final canSelect = !isOrganizer && isEventAvailable && !isRegistered;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             child: InkWell(
-              onTap: isRegistered ? null : () => setState(() => selectedScheduleId = schedule.id),
+              onTap: canSelect ? () => setState(() => selectedScheduleId = schedule.id) : null,
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isRegistered
-                      ? const Color(0xFF10B981).withOpacity(0.1)
-                      : isSelected
-                          ? const Color(0xFF84CC16).withOpacity(0.1)
+                  color: isOrganizer
+                      ? const Color(0xFFF1F5F9)
+                      : isRegistered
+                          ? const Color(0xFF10B981).withOpacity(0.1)
+                          : isSelected
+                              ? const Color(0xFF84CC16).withOpacity(0.1)
                           : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isRegistered
-                        ? const Color(0xFF10B981)
-                        : isSelected
-                            ? const Color(0xFF84CC16)
-                            : const Color(0xFFE2E8F0),
+                    color: isOrganizer
+                        ? const Color(0xFFE2E8F0)
+                        : isRegistered
+                            ? const Color(0xFF10B981)
+                            : isSelected
+                                ? const Color(0xFF84CC16)
+                                : const Color(0xFFE2E8F0),
                     width: 2,
                   ),
                 ),
@@ -545,7 +665,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: isRegistered
+                        color: isOrganizer
+                            ? const Color(0xFF475569)
+                            : isRegistered
                             ? const Color(0xFF10B981)
                             : const Color(0xFF0F172A),
                       ),
@@ -556,6 +678,16 @@ class _EventDetailPageState extends State<EventDetailPage> {
                         'Registered',
                         style: TextStyle(
                           color: Color(0xFF10B981),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ] else if (isOrganizer) ...[
+                      const Spacer(),
+                      Text(
+                        'Organizer view',
+                        style: TextStyle(
+                          color: const Color(0xFF94A3B8),
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -572,7 +704,65 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 
   Widget _buildActionButton(CookieRequest request) {
-    if (event!.userSchedules != null && event!.userSchedules!.isNotEmpty) {
+    final isOrganizer = event!.isOrganizer;
+    final isEventAvailable = event!.status.toLowerCase() == 'available';
+    final hasSchedules = event!.schedules != null && event!.schedules!.isNotEmpty;
+    final hasRegistration = event!.userSchedules != null && event!.userSchedules!.isNotEmpty;
+
+    if (isOrganizer) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'You are the organizer. Manage availability below.',
+            style: TextStyle(
+              color: const Color(0xFF475569),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isEventAvailable ? Colors.red : const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              onPressed: () => toggleAvailability(request),
+              child: Text(
+                isEventAvailable ? 'MARK UNAVAILABLE' : 'MARK AVAILABLE',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 48,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0F172A),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditEventForm(event: event!),
+                  ),
+                );
+                if (result == true) fetchEventDetail();
+              },
+              child: const Text('EDIT EVENT'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (hasRegistration) {
       return SizedBox(
         width: double.infinity,
         height: 56,
@@ -589,7 +779,24 @@ class _EventDetailPageState extends State<EventDetailPage> {
       );
     }
 
-    if (event!.schedules != null && event!.schedules!.isNotEmpty) {
+    if (!isEventAvailable) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFE2E8F0),
+            foregroundColor: const Color(0xFF94A3B8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 0,
+          ),
+          onPressed: null,
+          child: const Text('EVENT UNAVAILABLE', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 1)),
+        ),
+      );
+    }
+
+    if (hasSchedules) {
       return SizedBox(
         width: double.infinity,
         height: 56,
@@ -642,6 +849,65 @@ class _EventDetailPageState extends State<EventDetailPage> {
           ),
           const SizedBox(height: 12),
           content,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetaTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? accent,
+  }) {
+    final Color iconColor = accent ?? const Color(0xFF0F172A);
+    final Color borderColor = accent?.withOpacity(0.4) ?? const Color(0xFFE2E8F0);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 36,
+            width: 36,
+            decoration: BoxDecoration(
+              color: (accent ?? const Color(0xFF84CC16)).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 0.6,
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value.isNotEmpty ? value : '-',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

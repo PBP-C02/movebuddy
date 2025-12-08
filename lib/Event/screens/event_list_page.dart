@@ -743,8 +743,8 @@ class _EventListPageState extends State<EventListPage> {
                       const SizedBox(height: 2),
                       Text(
                         _hasActiveFilters
-                            ? "Filter aktif diterapkan ke data PWS."
-                            : "Data langsung dari PWS tanpa filter tambahan.",
+                            ? "Filter aktif sedang diterapkan."
+                            : "Menampilkan semua event tanpa filter tambahan.",
                         style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
                       ),
                     ],
