@@ -41,6 +41,21 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
   bool _didInitRequest = false;
   bool _didChange = false;
   String? _currentUserId;
+  String get _normalizedBaseUrl =>
+      _baseUrl.endsWith('/') ? _baseUrl : '$_baseUrl/';
+  String _normalizeUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+    final hasScheme =
+        trimmed.startsWith('http://') || trimmed.startsWith('https://');
+    final withScheme = hasScheme ? trimmed : 'https://$trimmed';
+    final encoded = withScheme.replaceAll(' ', '%20');
+    final uri = Uri.tryParse(encoded);
+    if (uri == null || uri.scheme.isEmpty || uri.host.isEmpty) {
+      return '';
+    }
+    return uri.toString();
+  }
 
   @override
   void initState() {
@@ -75,7 +90,9 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     if (_isActionBusy) return;
     setState(() => _isActionBusy = true);
     try {
-      final url = '$_baseUrl$path';
+      final url = (path.startsWith('http://') || path.startsWith('https://'))
+          ? path
+          : _buildActionUrl(path);
       final response = await _request.post(url, {});
       
       final success = response is Map && response['success'] == true;
@@ -99,11 +116,15 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
   }
 
   String _buildActionUrl(String path) {
+    final base = _normalizedBaseUrl;
+    final normalizedPath =
+        path.startsWith('/') ? path.substring(1) : path;
     if (path.contains('{id}')) {
-      return '$_baseUrl${path.replaceAll('{id}', coach.id)}';
+      return '$base${normalizedPath.replaceAll('{id}', coach.id)}';
     }
-    final normalized = path.endsWith('/') ? path : '$path/';
-    return '$_baseUrl$normalized${coach.id}/';
+    final normalized =
+        normalizedPath.endsWith('/') ? normalizedPath : '$normalizedPath/';
+    return '$base$normalized${coach.id}/';
   }
 
   Future<void> _toggleBooking() async {
@@ -122,10 +143,19 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     }
 
     final path = bookedByMe ? _cancelBookingPath : _bookPath;
+    final payload = <String, String>{};
+    final normalizedInstagram = _normalizeUrl(coach.instagramLink);
+    if (normalizedInstagram.isNotEmpty) {
+      payload['instagram_link'] = normalizedInstagram;
+    }
+    final normalizedMaps = _normalizeUrl(coach.mapsLink);
+    if (normalizedMaps.isNotEmpty) {
+      payload['mapsLink'] = normalizedMaps;
+    }
 
     try {
       final url = _buildActionUrl(path);
-      final response = await _request.post(url, {});
+      final response = await _request.post(url, payload);
       final success = response is Map && response['success'] == true;
       final message =
           (response is Map ? response['message'] : '')?.toString() ?? '';
@@ -177,7 +207,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
 
   Future<void> _markAvailable() async {
     await _performAction(
-      '/coach/mark-available/${coach.id}/',
+      'mark-available/{id}/',
       onSuccess: () {
         setState(() {
           coach = coach.copyWith(isBooked: false);
@@ -188,7 +218,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
 
   Future<void> _markUnavailable() async {
     await _performAction(
-      '/coach/mark-unavailable/${coach.id}/',
+      'mark-unavailable/{id}/',
       onSuccess: () {
         setState(() {
           coach = coach.copyWith(isBooked: true);
@@ -222,7 +252,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     if (confirmed != true) return;
 
     await _performAction(
-      '/coach/delete-coach/${coach.id}/',
+      'delete-coach/{id}/',
       onSuccess: () {
         Navigator.pop(context, true);
       },
@@ -336,9 +366,10 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     final categoryLabel = coach.categoryDisplay ?? coach.category;
 
     final instagramLink = _hasValue(coach.instagramLink)
-        ? coach.instagramLink.trim()
+        ? _normalizeUrl(coach.instagramLink)
         : '';
-    final mapsLink = _hasValue(coach.mapsLink) ? coach.mapsLink.trim() : '';
+    final mapsLink =
+        _hasValue(coach.mapsLink) ? _normalizeUrl(coach.mapsLink) : '';
     final phoneRaw =
         _hasValue(coach.userPhone) ? coach.userPhone.trim() : coach.formattedPhone;
     final phone = _hasValue(phoneRaw) ? phoneRaw!.trim() : '';
