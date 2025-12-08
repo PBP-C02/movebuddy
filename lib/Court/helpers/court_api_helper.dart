@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import '../models/court_models.dart';
 
@@ -24,14 +25,14 @@ class CourtApiHelper {
 
   // Gunakan 10.0.2.2 untuk Emulator Android
   // Gunakan IP Laptop (misal 192.168.x.x) untuk HP Fisik
-  static const String baseUrl = "http://127.0.0.1:8000";
+  static const String baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/";
 
   CourtApiHelper(this.request);
 
   /// Build a usable image URL from API value (handles absolute/relative/empty).
   static String resolveImageUrl(
     String? rawUrl, {
-    String placeholder = "https://via.placeholder.com/150",
+    String placeholder = "https://u7.uidownload.com/vector/866/424/vector-flat-icon-in-black-and-white-football-field-vector-ai-eps.jpg",
   }) {
     if (rawUrl == null) return placeholder;
     final trimmed = rawUrl.trim();
@@ -81,9 +82,7 @@ class CourtApiHelper {
       
       String queryString = "";
       if (params.isNotEmpty) {
-        queryString = "?" + params.entries
-            .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-            .join('&');
+        queryString = "?${params.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}";
       }
 
       final url = _buildUrl('/court/api/court/search/$queryString');
@@ -221,7 +220,7 @@ class CourtApiHelper {
 
       return response is Map && response['success'] == true;
     } catch (e) {
-      print("Error Add Court: $e");
+      debugPrint("Error Add Court: $e");
       return false;
     }
   }
@@ -235,7 +234,7 @@ class CourtApiHelper {
 
       return response is Map && response['success'] == true;
     } catch (e) {
-       print("Error Edit Court: $e");
+       debugPrint("Error Edit Court: $e");
        return false;
     }
   }

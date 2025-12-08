@@ -11,10 +11,10 @@ import 'court_form_screen.dart';
 class CourtDetailScreen extends StatefulWidget {
   final int courtId;
 
-  const CourtDetailScreen({Key? key, required this.courtId}) : super(key: key);
+  const CourtDetailScreen({super.key, required this.courtId});
 
   @override
-  _CourtDetailScreenState createState() => _CourtDetailScreenState();
+  State<CourtDetailScreen> createState() => _CourtDetailScreenState();
 }
 
 class _CourtDetailScreenState extends State<CourtDetailScreen> {
@@ -186,6 +186,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
               if (snapshot.hasData && snapshot.data!.ownedByUser) {
                 return PopupMenuButton<String>(
                   onSelected: (value) async {
+                    final messenger = ScaffoldMessenger.of(context);
                     if (value == 'edit') {
                       final result = await Navigator.push(
                         context,
@@ -193,11 +194,11 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                           builder: (_) => CourtFormScreen(court: snapshot.data!.basicInfo),
                         ),
                       );
+                      if (!mounted) return;
                       if (result == true) {
                         _refreshDetail(request);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data berhasil diperbarui")));
-                        }
+                        if (!mounted) return;
+                        messenger.showSnackBar(const SnackBar(content: Text("Data berhasil diperbarui")));
                       }
                     } else if (value == 'delete') {
                       _deleteCourt(request);
@@ -253,7 +254,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                         Material(
                           elevation: 6,
                           borderRadius: BorderRadius.circular(22),
-                          shadowColor: Colors.black.withOpacity(0.16),
+                          shadowColor: Colors.black.withValues(alpha: 0.16),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(22),
                             child: Stack(
@@ -309,7 +310,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                       borderRadius: BorderRadius.circular(14),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.18),
+                                          color: Colors.black.withValues(alpha: 0.18),
                                           blurRadius: 14,
                                           offset: const Offset(0, 8),
                                         ),
@@ -348,7 +349,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
+                                color: Colors.black.withValues(alpha: 0.06),
                                 blurRadius: 18,
                                 offset: const Offset(0, 8),
                               ),
@@ -633,17 +634,18 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         ),
                                         onPressed: () async {
+                                          final messenger = ScaffoldMessenger.of(context);
                                           final result = await Navigator.push(
                                             context,
                                             MaterialPageRoute(builder: (_) => CourtFormScreen(court: detail.basicInfo)),
                                           );
+                                          if (!mounted) return;
                                           if (result == true) {
                                             _refreshDetail(request);
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text("Data berhasil diperbarui")),
-                                              );
-                                            }
+                                            if (!mounted) return;
+                                            messenger.showSnackBar(
+                                              const SnackBar(content: Text("Data berhasil diperbarui")),
+                                            );
                                           }
                                         },
                                       ),

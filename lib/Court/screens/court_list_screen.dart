@@ -10,10 +10,10 @@ import 'court_detail_screen.dart';
 import 'court_form_screen.dart';
 
 class CourtListScreen extends StatefulWidget {
-  const CourtListScreen({Key? key}) : super(key: key);
+  const CourtListScreen({super.key});
 
   @override
-  _CourtListScreenState createState() => _CourtListScreenState();
+  State<CourtListScreen> createState() => _CourtListScreenState();
 }
 
 class _CourtListScreenState extends State<CourtListScreen> {
@@ -25,7 +25,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
   final _searchController = TextEditingController();
   final _minPriceController = TextEditingController();
   final _maxPriceController = TextEditingController();
-  double _minRating = 0;
+  final double _minRating = 0;
   final _latController = TextEditingController();
   final _lngController = TextEditingController();
   Timer? _debounce;
@@ -157,7 +157,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
                               borderRadius: BorderRadius.circular(18),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.06),
+                                  color: Colors.black.withValues(alpha: 0.06),
                                   blurRadius: 20,
                                   offset: const Offset(0, 10),
                                 ),
@@ -249,7 +249,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -301,7 +301,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
               return ChoiceChip(
                 label: Text(sport["label"] ?? ""),
                 selected: selected,
-                selectedColor: const Color(0xFF8BC34A).withOpacity(0.2),
+                selectedColor: const Color(0xFF8BC34A).withValues(alpha: 0.2),
                 labelStyle: TextStyle(
                   color: selected ? const Color(0xFF2E7D32) : Colors.black87,
                   fontWeight: FontWeight.w600,
