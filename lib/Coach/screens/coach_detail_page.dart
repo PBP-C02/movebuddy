@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
@@ -25,13 +23,24 @@ class CoachDetailPage extends StatefulWidget {
 class _CoachDetailPageState extends State<CoachDetailPage> {
   static const String _baseUrl = String.fromEnvironment(
     'COACH_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/coach/',
+  );
+  static const String _bookPath = String.fromEnvironment(
+    'COACH_BOOK_PATH',
+    defaultValue: 'book-coach/{id}/',
+  );
+  static const String _cancelBookingPath = String.fromEnvironment(
+    'COACH_CANCEL_PATH',
+    defaultValue: 'cancel-booking/{id}/',
   );
 
   late Coach coach;
   late CookieRequest _request;
   bool _isActionBusy = false;
+  bool _isBookingBusy = false;
   bool _didInitRequest = false;
+  bool _didChange = false;
+  String? _currentUserId;
 
   @override
   void initState() {
@@ -44,6 +53,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     super.didChangeDependencies();
     if (!_didInitRequest) {
       _request = context.read<CookieRequest>();
+      _currentUserId = _resolveCurrentUserId();
       _didInitRequest = true;
     }
   }
@@ -67,6 +77,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     try {
       final url = '$_baseUrl$path';
       final response = await _request.post(url, {});
+      
       final success = response is Map && response['success'] == true;
       final message = (response is Map ? response['message'] : '')?.toString() ?? '';
       if (success) {
@@ -85,6 +96,83 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
         setState(() => _isActionBusy = false);
       }
     }
+  }
+
+  String _buildActionUrl(String path) {
+    if (path.contains('{id}')) {
+      return '$_baseUrl${path.replaceAll('{id}', coach.id)}';
+    }
+    final normalized = path.endsWith('/') ? path : '$path/';
+    return '$_baseUrl$normalized${coach.id}/';
+  }
+
+  Future<void> _toggleBooking() async {
+    if (_isBookingBusy) return;
+    setState(() => _isBookingBusy = true);
+
+      final currentlyBooked = coach.isBooked;
+      final bookedByMe = coach.bookedByMe ||
+          (coach.participantId != null &&
+              _currentUserId != null &&
+              coach.participantId == _currentUserId);
+    if (currentlyBooked && !bookedByMe) {
+      _showSnack('Coach sudah dibooking pengguna lain.', isError: true);
+      setState(() => _isBookingBusy = false);
+      return;
+    }
+
+    final path = bookedByMe ? _cancelBookingPath : _bookPath;
+
+    try {
+      final url = _buildActionUrl(path);
+      final response = await _request.post(url, {});
+      final success = response is Map && response['success'] == true;
+      final message =
+          (response is Map ? response['message'] : '')?.toString() ?? '';
+
+      if (success) {
+        setState(() {
+          final nextBooked = bookedByMe ? false : true;
+          coach = coach.copyWith(
+            isBooked: nextBooked,
+            bookedByMe: nextBooked,
+          );
+          _didChange = true;
+        });
+        _showSnack(
+          message.isNotEmpty
+              ? message
+              : (bookedByMe ? 'Booking dibatalkan' : 'Booking berhasil'),
+        );
+      } else {
+        _showSnack(
+          message.isNotEmpty ? message : 'Gagal memproses booking',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      _showSnack('Terjadi kesalahan: $e', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isBookingBusy = false);
+      }
+    }
+  }
+
+  String? _resolveCurrentUserId() {
+    final cookieId = _request.cookies['user_id']?.toString();
+    if (cookieId != null && cookieId.isNotEmpty) return cookieId;
+
+    final data = _request.jsonData;
+    if (data is Map) {
+      for (final key in ['id', 'user_id', 'userId']) {
+        final val = data[key];
+        if (val != null && val.toString().isNotEmpty) {
+          return val.toString();
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> _markAvailable() async {
@@ -234,7 +322,13 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isOwner = widget.canEdit || coach.isOwner;
+    final isOwner = widget.canEdit ||
+        coach.isOwner ||
+        (_currentUserId != null &&
+            coach.userId.isNotEmpty &&
+            coach.userId == _currentUserId);
+    final isBookedByMe = coach.bookedByMe;
+    final showBookingSection = !isOwner;
     final availabilityColor =
         coach.isBooked ? Colors.red.shade100 : Colors.green.shade100;
     final availabilityTextColor =
@@ -253,42 +347,38 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
       _hasValue(coach.whatsappLink) ? coach.whatsappLink.trim() : '',
     );
 
-    String contactUrl;
-    String contactLabel;
-    if (whatsappLink.isNotEmpty) {
-      contactUrl = whatsappLink;
-      contactLabel = 'Book via WhatsApp';
-    } else if (instagramLink.isNotEmpty) {
-      contactUrl = instagramLink;
-      contactLabel = 'View Instagram';
-    } else if (mapsLink.isNotEmpty) {
-      contactUrl = mapsLink;
-      contactLabel = 'Buka Google Maps';
-    } else if (phone.isNotEmpty) {
-      final sanitized = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-      contactUrl = 'tel:$sanitized';
-      contactLabel = 'Call';
-    } else {
-      contactUrl = '';
-      contactLabel = 'Contact not available';
-    }
+    final isBooked = coach.isBooked;
+    final bookingLabel = isBookedByMe
+        ? 'Cancel Booking'
+        : isBooked
+            ? 'Sudah dibooking'
+            : 'Book Coach';
+    final bookingColor = isBookedByMe
+        ? Colors.red.shade600
+        : const Color(0xFF22C55E);
+    final showWhatsApp = isBooked && isBookedByMe && whatsappLink.isNotEmpty;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.white.withOpacity(0.95),
-        elevation: 0,
-        foregroundColor: Colors.black87,
-        title: const Text(
-          'Coach Detail',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          if (isOwner)
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'edit') {
-                  _openUpdate();
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, _didChange);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white.withOpacity(0.95),
+          elevation: 0,
+          foregroundColor: Colors.black87,
+          title: const Text(
+            'Coach Detail',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          actions: [
+            if (isOwner)
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _openUpdate();
                 } else if (value == 'delete') {
                   _deleteCoach();
                 }
@@ -316,49 +406,27 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                 ),
               ],
             ),
-        ],
-      ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                'assets/coach/bg.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-            Positioned.fill(
-              child: Container(color: Colors.white.withOpacity(0.8)),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                ignoring: true,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 0.4, sigmaY: 0.4),
-                  child: Container(
-                    color: Colors.white.withOpacity(0.02),
+          ],
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 26,
+                    offset: const Offset(0, 12),
                   ),
-                ),
+                ],
               ),
-            ),
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.94),
-                  borderRadius: BorderRadius.circular(26),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 26,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(18),
                       child: Container(
@@ -586,8 +654,8 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    if (!isOwner)
+                      const SizedBox(height: 14),
+                    if (!isOwner && showBookingSection)
                       _sectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,11 +680,12 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: contactUrl.isEmpty
+                                onPressed: _isBookingBusy ||
+                                        (!isBookedByMe && isBooked)
                                     ? null
-                                    : () => _launchExternal(contactUrl),
+                                    : _toggleBooking,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF22C55E),
+                                  backgroundColor: bookingColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 14,
@@ -625,22 +694,51 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: Text(
-                                  contactUrl.isEmpty
-                                      ? 'Contact not available'
-                                      : contactLabel,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.5,
+                                child: _isBookingBusy
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Text(
+                                        bookingLabel,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            if (showWhatsApp) ...[
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _launchExternal(whatsappLink),
+                                  icon: const Icon(Icons.chat, color: Color(0xFF22C55E)),
+                                  label: const Text(
+                                    'Hubungi via WhatsApp',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF1F2937),
+                                    side: const BorderSide(color: Color(0xFF22C55E)),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
-                      )
-                    else
+                      ),
+                    if (isOwner)
                       _sectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -706,8 +804,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
       ),
     );
   }

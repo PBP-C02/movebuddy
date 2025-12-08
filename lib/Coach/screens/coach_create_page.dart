@@ -19,11 +19,11 @@ class CoachCreatePage extends StatefulWidget {
 class _CoachCreatePageState extends State<CoachCreatePage> {
   static const String _baseUrl = String.fromEnvironment(
     'COACH_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/coach/',
   );
   static const String _createPath = String.fromEnvironment(
     'COACH_CREATE_PATH',
-    defaultValue: '/coach/create-flutter/',
+    defaultValue: 'create-flutter/',
   );
 
   final _formKey = GlobalKey<FormState>();
@@ -34,6 +34,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
   final _priceController = TextEditingController();
   final _instagramController = TextEditingController();
   final _mapsController = TextEditingController();
+  final _ratingController = TextEditingController(text: '5.0');
 
   DateTime? _selectedDate;
   TimeOfDay? _startTime;
@@ -80,6 +81,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
     _priceController.dispose();
     _instagramController.dispose();
     _mapsController.dispose();
+    _ratingController.dispose();
     super.dispose();
   }
 
@@ -146,6 +148,27 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
       return;
     }
 
+    final mapsLink = _mapsController.text.trim();
+    if (mapsLink.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Link Google Maps wajib diisi.'),
+        ),
+      );
+      return;
+    }
+
+    final ratingValue = double.tryParse(_ratingController.text.trim());
+    if (ratingValue == null || ratingValue < 0 || ratingValue > 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rating harus angka 0-5.'),
+        ),
+      );
+      return;
+    }
+
+    _rating = ratingValue;
     setState(() => _isSubmitting = true);
     final request = context.read<CookieRequest>();
 
@@ -170,7 +193,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
       'endTime': endStr,
       'rating': _rating.toStringAsFixed(1),
       'instagram_link': _instagramController.text.trim(),
-      'mapsLink': _mapsController.text.trim(),
+      'mapsLink': mapsLink,
     };
 
     if (_imageBase64 != null) {
@@ -216,8 +239,6 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
 
   @override
   Widget build(BuildContext context) {
-    final ratingOptions =
-        List<double>.generate(11, (index) => index * 0.5); // 0.0 - 5.0
     final dateLabel = _selectedDate == null
         ? 'Pilih tanggal'
         : DateFormat('dd MMM yyyy').format(_selectedDate!);
@@ -227,7 +248,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
     final endLabel = _endTime == null ? 'Jam selesai' : _formatTime(_endTime!);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -237,21 +258,10 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/coach/bg.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned.fill(
-            child: Container(color: Colors.white.withOpacity(0.9)),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Container(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -266,225 +276,262 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                 ),
                 child: Form(
                   key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Lengkapi detail coach',
-                        style:
-                            TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: _filledDecoration('Judul'),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _descriptionController,
-                        maxLines: 3,
-                        decoration: _filledDecoration('Deskripsi'),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: _selectedCategory,
-                        decoration: _filledDecoration('Kategori'),
-                        items: _categories
-                            .map(
-                              (cat) => DropdownMenuItem(
-                                value: cat['value'],
-                                child: Text(cat['label']!),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _selectedCategory = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: _locationController.text.isEmpty
-                            ? ''
-                            : _locationController.text,
-                        decoration: _filledDecoration('Kota'),
-                        items: _locationOptions
-                            .map(
-                              (loc) => DropdownMenuItem(
-                                value: loc,
-                                child: Text(loc.isEmpty ? 'Pilih lokasi' : loc),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() => _locationController.text = value ?? '');
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: _filledDecoration('Alamat lengkap'),
-                        maxLines: 2,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _priceController,
-                        decoration: _filledDecoration(
-                          'Harga per sesi',
-                          prefix: 'Rp ',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Lengkapi detail coach',
+                          style:
+                              TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                         ),
-                        keyboardType: TextInputType.number,
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                          return int.tryParse(
-                                    v.replaceAll('.', '').replaceAll(',', ''),
-                                  ) ==
-                                  null
-                              ? 'Masukkan angka'
-                              : null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _selectDate,
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF7F8FA),
-                                foregroundColor: Colors.black87,
-                                side: BorderSide(color: Colors.grey.shade300),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 10),
+                        _buildSectionTitle('Informasi Coach'),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _titleController,
+                          decoration: _filledDecoration('Judul'),
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _descriptionController,
+                          maxLines: 3,
+                          decoration: _filledDecoration('Deskripsi'),
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: _selectedCategory,
+                          decoration: _filledDecoration('Kategori'),
+                          items: _categories
+                              .map(
+                                (cat) => DropdownMenuItem(
+                                  value: cat['value'],
+                                  child: Text(cat['label']!),
                                 ),
-                              ),
-                              icon: const Icon(Icons.calendar_today),
-                              label: Text(dateLabel),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _selectTime(isStart: true),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF7F8FA),
-                                foregroundColor: Colors.black87,
-                                side: BorderSide(color: Colors.grey.shade300),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _selectedCategory = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        _buildSectionTitle('Lokasi'),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          value: _locationController.text.isEmpty
+                              ? ''
+                              : _locationController.text,
+                          decoration: _filledDecoration('Kota'),
+                          items: _locationOptions
+                              .map(
+                                (loc) => DropdownMenuItem(
+                                  value: loc,
+                                  child: Text(loc.isEmpty ? 'Pilih lokasi' : loc),
                                 ),
-                              ),
-                              icon: const Icon(Icons.access_time),
-                              label: Text(startLabel),
-                            ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => _locationController.text = value ?? '');
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _addressController,
+                          decoration: _filledDecoration('Alamat lengkap'),
+                          maxLines: 2,
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _mapsController,
+                          decoration: _filledDecoration(
+                            'Link Google Maps',
+                            hint: 'https://maps.google.com/...',
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _selectTime(isStart: false),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF7F8FA),
-                                foregroundColor: Colors.black87,
-                                side: BorderSide(color: Colors.grey.shade300),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                          keyboardType: TextInputType.url,
+                        ),
+                        const SizedBox(height: 18),
+                        _buildSectionTitle('Jadwal & Harga'),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _priceController,
+                          decoration: _filledDecoration(
+                            'Harga per sesi',
+                            prefix: 'Rp ',
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Wajib diisi';
+                            return int.tryParse(
+                                      v.replaceAll('.', '').replaceAll(',', ''),
+                                    ) ==
+                                    null
+                                ? 'Masukkan angka'
+                                : null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _selectDate,
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF7F8FA),
+                                  foregroundColor: Colors.black87,
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
+                                icon: const Icon(Icons.calendar_today),
+                                label: Text(dateLabel),
                               ),
-                              icon: const Icon(Icons.access_time_filled),
-                              label: Text(endLabel),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<double>(
-                        value: _rating,
-                        decoration: _filledDecoration('Rating awal'),
-                        items: ratingOptions
-                            .map(
-                              (r) => DropdownMenuItem(
-                                value: r,
-                                child: Text(r.toStringAsFixed(1)),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _rating = val);
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _instagramController,
-                        decoration: _filledDecoration(
-                          'Instagram (opsional)',
-                          hint: 'https://instagram.com/username',
+                          ],
                         ),
-                        keyboardType: TextInputType.url,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _mapsController,
-                        decoration: _filledDecoration(
-                          'Link Google Maps (opsional)',
-                          hint: 'https://maps.google.com/...',
-                        ),
-                        keyboardType: TextInputType.url,
-                      ),
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: _pickImage,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: const Icon(Icons.image),
-                        label: Text(
-                          _pickedImage == null
-                              ? 'Pilih gambar (opsional)'
-                              : 'Ganti gambar',
-                        ),
-                      ),
-                      if (_pickedImage != null) ...[
                         const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _selectTime(isStart: true),
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF7F8FA),
+                                  foregroundColor: Colors.black87,
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.access_time),
+                                label: Text(startLabel),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _selectTime(isStart: false),
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF7F8FA),
+                                  foregroundColor: Colors.black87,
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.access_time_filled),
+                                label: Text(endLabel),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        _buildSectionTitle('Rating & Kontak'),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _ratingController,
+                          decoration: _filledDecoration(
+                            'Rating (0-5)',
+                            hint: 'contoh: 4.5',
+                          ),
+                          keyboardType:
+                              const TextInputType.numberWithOptions(decimal: true),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Wajib diisi';
+                            final parsed = double.tryParse(v.trim());
+                            if (parsed == null || parsed < 0 || parsed > 5) {
+                              return 'Masukkan angka 0-5';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _instagramController,
+                          decoration: _filledDecoration(
+                            'Instagram (opsional)',
+                            hint: 'https://instagram.com/username',
+                          ),
+                          keyboardType: TextInputType.url,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionTitle('Foto Coach'),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton.icon(
+                            onPressed: _pickImage,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            icon: const Icon(Icons.image_outlined, size: 22),
+                            label: Text(
+                              _pickedImage == null
+                                  ? 'Pilih gambar (opsional)'
+                                  : 'Ganti gambar',
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: kIsWeb && _imageBytes != null
-                              ? Image.memory(
-                                  _imageBytes!,
-                                  height: 180,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.file(
-                                  File(_pickedImage!.path),
-                                  height: 180,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
+                          child: Container(
+                            height: 220,
+                            width: double.infinity,
+                            color: const Color(0xFFF5F5F5),
+                            child: _pickedImage != null
+                                ? (kIsWeb && _imageBytes != null
+                                    ? Image.memory(
+                                        _imageBytes!,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      )
+                                    : Image.file(
+                                        File(_pickedImage!.path),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ))
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.image_outlined,
+                                          size: 42, color: Colors.grey),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Belum ada gambar',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
                         ),
-                      ],
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         height: 54,
                         child: ElevatedButton(
                           onPressed: _isSubmitting ? null : _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8BC34A),
-                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFFB7DC81),
+                            foregroundColor: const Color(0xFF182435),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -495,7 +542,7 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                                   height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    color: Colors.white,
+                                    color: Color(0xFF182435),
                                   ),
                                 )
                               : const Text(
@@ -509,8 +556,16 @@ class _CoachCreatePageState extends State<CoachCreatePage> {
                 ),
               ),
             ),
-          ),
-        ],
+        ),
+      );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontWeight: FontWeight.w800,
+        fontSize: 14,
       ),
     );
   }
