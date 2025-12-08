@@ -16,11 +16,8 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-
-  // Ganti dengan URL Deployed atau Localhost kamu
-  // Jangan lupa hapus trailing slash jika di backend path-nya pakai slash
-  final String baseUrl = "http://127.0.0.1:8000"; 
-
+  // Keep trailing slash and append paths without a leading slash.
+  final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/';
   @override
   Widget build(BuildContext context) {
     final request = context.watch<CookieRequest>();
@@ -133,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
                               // Request ke Backend
                               try {
                                 final response = await request.postJson(
-                                  "$baseUrl/login/",
+                                  "${baseUrl}login/",
                                   jsonEncode({
                                     'email': email,
                                     'password': password,

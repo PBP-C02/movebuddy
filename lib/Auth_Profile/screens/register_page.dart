@@ -12,6 +12,9 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  // Keep trailing slash and append paths without a leading slash.
+  final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/';
+
   
   // Controllers
   final TextEditingController _namaController = TextEditingController();
@@ -23,8 +26,6 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _kelamin; // 'L' atau 'P'
   DateTime? _tanggalLahir;
   bool _isLoading = false;
-
-  final String baseUrl = "http://127.0.0.1:8000";
 
   // Date Picker
   Future<void> _selectDate(BuildContext context) async {
@@ -184,7 +185,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   
                                   try {
                                     final response = await request.postJson(
-                                      "$baseUrl/register/",
+                                      "${baseUrl}register/",
                                       jsonEncode({
                                         'nama': _namaController.text,
                                         'email': _emailController.text,
