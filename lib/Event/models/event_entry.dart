@@ -53,7 +53,7 @@ class EventEntry {
   });
 
   factory EventEntry.fromJson(Map<String, dynamic> json) {
-    final rawPhotoUrl = json["photo_url"] ?? "";
+    final rawPhotoUrl = _asString(json["photo_url"]);
     final resolvedPhotoUrl = (rawPhotoUrl.startsWith("http") || rawPhotoUrl.startsWith("data:"))
         ? rawPhotoUrl
         : rawPhotoUrl.isNotEmpty
@@ -61,23 +61,29 @@ class EventEntry {
             : "";
 
     return EventEntry(
-      id: (json["id"] ?? "").toString(),
-      name: json["name"] ?? "",
-      sportType: json["sport_type"] ?? "",
-      description: json["description"] ?? "",
-      city: json["city"] ?? "",
-      fullAddress: json["full_address"] ?? "",
-      googleMapsLink: json["google_maps_link"] ?? "",
-      entryPrice: json["entry_price"]?.toString() ?? "0",
-      activities: json["activities"] ?? "",
-      rating: json["rating"]?.toString() ?? "0",
+      id: _asString(json["id"]),
+      name: _asString(json["name"]),
+      sportType: _asString(json["sport_type"]),
+      description: _asString(json["description"]),
+      city: _asString(json["city"]),
+      fullAddress: _asString(json["full_address"]),
+      googleMapsLink: _asString(json["google_maps_link"]),
+      entryPrice: _asString(json["entry_price"]).isNotEmpty
+          ? _asString(json["entry_price"])
+          : "0",
+      activities: _asString(json["activities"]),
+      rating: _asString(json["rating"]).isNotEmpty
+          ? _asString(json["rating"])
+          : "0",
       photoUrl: resolvedPhotoUrl,
-      status: json["status"] ?? "",
-      category: json["category"] ?? "",
+      status: _asString(json["status"]),
+      category: _asString(json["category"]),
       organizerId: _asInt(json["organizer_id"]),
-      organizerName: json["organizer_name"] ??
-          json["organizer"] ??
-          "",
+      organizerName: _asString(
+        json["organizer_name"] ??
+            json["organizer"] ??
+            "",
+      ),
       createdAt: json["created_at"] != null
           ? DateTime.tryParse(json["created_at"]) ?? DateTime.now()
           : DateTime.now(),
@@ -115,6 +121,13 @@ int _asInt(dynamic value) {
   return 0;
 }
 
+String _asString(dynamic value) {
+  if (value == null) return "";
+  if (value is String) return value;
+  if (value is List) return value.join(", ");
+  return value.toString();
+}
+
 class EventSchedule {
   String id;
   DateTime date;
@@ -125,7 +138,7 @@ class EventSchedule {
   });
 
   factory EventSchedule.fromJson(Map<String, dynamic> json) => EventSchedule(
-        id: json["id"],
+        id: _asString(json["id"]),
         date: DateTime.parse(json["date"]),
       );
 

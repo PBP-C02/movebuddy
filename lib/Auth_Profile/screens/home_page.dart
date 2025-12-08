@@ -15,11 +15,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-<<<<<<< HEAD
   final String baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id";
-=======
-  final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/';
->>>>>>> ce25ff446ab37d372e636e70a95f77b40e497dd5
 
   Future<void> _logout() async {
     final request = context.read<CookieRequest>();

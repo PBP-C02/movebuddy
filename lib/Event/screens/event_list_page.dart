@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +9,6 @@ import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
 import 'package:move_buddy/Event/models/event_entry.dart';
 import 'package:move_buddy/Event/screens/event_detail_page.dart';
 import 'package:move_buddy/Event/screens/add_event_form.dart';
-import 'package:move_buddy/Event/screens/my_bookings_page.dart';
 import 'package:move_buddy/Event/widgets/event_card.dart';
 import 'package:move_buddy/Event/utils/event_helpers.dart';
 import 'package:move_buddy/Sport_Partner/constants.dart';
@@ -79,9 +81,32 @@ class _EventListPageState extends State<EventListPage> {
     return events;
   }
 
+  Future<List<EventEntry>> fetchBookings(CookieRequest request) async {
+    try {
+      final response = await request.get('$baseUrl/event/json/my-bookings/');
+      if (response is List) {
+        final bookings = response
+            .whereType<Map<String, dynamic>>()
+            .map((item) => item['event'])
+            .whereType<Map<String, dynamic>>()
+            .map((json) {
+              final entry = EventEntry.fromJson(json);
+              entry.isRegistered = true;
+              return entry;
+            })
+            .toList();
+        return bookings;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching bookings: $e');
+      rethrow;
+    }
+  }
+
   void _refreshData(CookieRequest request) {
     setState(() {
-      _eventsFuture = fetchEvents(request);
+      _eventsFuture = _activeTab == 'bookings' ? fetchBookings(request) : fetchEvents(request);
     });
   }
 
@@ -107,6 +132,7 @@ class _EventListPageState extends State<EventListPage> {
 
     var filtered = events.where((event) {
       if (_activeTab == 'created' && !event.isOrganizer) return false;
+      if (_activeTab == 'bookings' && !event.isRegistered) return false;
       if (_availableOnly && event.status.toLowerCase() != 'available') return false;
 
       final price = _extractPrice(event.entryPrice);
@@ -329,6 +355,183 @@ class _EventListPageState extends State<EventListPage> {
     );
   }
 
+  Future<void> _updateEventStatus(
+    CookieRequest request, {
+    required EventEntry event,
+    required String status,
+  }) async {
+    final isAvailable = status.toLowerCase() == 'available';
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/event/${event.id}/ajax/toggle-availability/'),
+        headers: _sessionHeaders(request, json: true),
+        body: jsonEncode({'is_available': isAvailable}),
+      );
+
+      if (!mounted) return;
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map && decoded['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_stringifyMessage(decoded['message'] ?? 'Status updated'))),
+        );
+        _refreshData(request);
+        return;
+      }
+
+      final snippet = response.body.substring(0, response.body.length > 140 ? 140 : response.body.length);
+      final message = _stringifyMessage(
+        (decoded is Map ? decoded['message'] : null) ??
+            (snippet.isNotEmpty ? 'Respon tidak valid: $snippet' : 'Gagal memperbarui status event.'),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    } on FormatException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sesi mungkin habis atau endpoint salah. Coba login ulang.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memperbarui status: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteEvent(
+    CookieRequest request, {
+    required EventEntry event,
+  }) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus event?'),
+        content: const Text('Tindakan ini tidak bisa dibatalkan.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/event/${event.id}/ajax/delete/'),
+        headers: _sessionHeaders(request),
+        body: _stringifyBody({}),
+      );
+
+      if (!mounted) return;
+
+      final decoded = jsonDecode(response.body);
+      final success = decoded is Map && decoded['success'] == true;
+      final message = _stringifyMessage(
+        (decoded is Map ? decoded['message'] : null) ?? 'Gagal menghapus event.',
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: success ? null : Colors.red,
+        ),
+      );
+
+      if (success) {
+        _refreshData(request);
+      }
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Respon tidak valid: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus event: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<EventEntry?> _fetchEventDetailForEdit(
+    CookieRequest request, {
+    required String eventId,
+  }) async {
+    try {
+      final response = await request.get('$baseUrl/event/json/$eventId/');
+      if (response is Map) {
+        return EventEntry.fromJson(Map<String, dynamic>.from(response));
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch event detail for edit: $e');
+    }
+    return null;
+  }
+
+  Future<void> _openEditEvent(EventEntry event, CookieRequest request) async {
+    EventEntry? detailed = await _fetchEventDetailForEdit(request, eventId: event.id);
+    if (!mounted) return;
+
+    if (detailed == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal memuat detail lengkap, memakai data terakhir.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      detailed = event;
+    }
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddEventForm(initialEvent: detailed)),
+    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Event berhasil diperbarui.")),
+      );
+      _refreshData(request);
+    }
+  }
+
+  Future<void> _openEventDetail(EventEntry event, CookieRequest request) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EventDetailPage(eventId: event.id),
+      ),
+    );
+    if (changed == true && mounted) {
+      _refreshData(request);
+    }
+  }
+
   Future<void> _navigateToAddEvent() async {
     final result = await Navigator.push(
       context,
@@ -360,135 +563,157 @@ class _EventListPageState extends State<EventListPage> {
           IconButton(
             icon: const Icon(Icons.bookmark_added_outlined),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MyBookingsPage()),
-              );
+              setState(() => _activeTab = 'bookings');
+              _refreshData(request);
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildFilterCard(request),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async => _refreshData(request),
-              child: FutureBuilder<List<EventEntry>>(
-                future: _eventsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+      body: RefreshIndicator(
+        onRefresh: () async => _refreshData(request),
+        child: FutureBuilder<List<EventEntry>>(
+          future: _eventsFuture,
+          builder: (context, snapshot) {
+            final children = <Widget>[
+              _buildFilterCard(request),
+            ];
 
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Failed to load events\n${snapshot.error}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: () => _refreshData(request),
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              children.add(
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              );
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: children,
+              );
+            }
 
-                  final events = snapshot.data ?? [];
-                  final filteredEvents = _applyLocalFilters(events);
-
-                  if (events.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(24),
-                      children: const [
-                        SizedBox(height: 80),
-                        Center(child: Text("Tidak ada event ditemukan di PWS.")),
-                      ],
-                    );
-                  }
-
-                  if (filteredEvents.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                      children: [
-                        _buildResultHeader(0, request),
-                        Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 14,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.search_off, size: 48, color: Color(0xFF9CA3AF)),
-                              const SizedBox(height: 12),
-                              const Text(
-                                "Tidak ada event yang cocok dengan filter.",
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "Coba hapus filter harga/kota atau cari olahraga lain.",
-                                style: TextStyle(color: Color(0xFF6B7280)),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 12),
-                              TextButton.icon(
-                                onPressed: () => _resetFilters(request),
-                                icon: const Icon(Icons.refresh),
-                                label: const Text("Reset semua filter"),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  return ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 24),
+            if (snapshot.hasError) {
+              children.add(
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
                     children: [
-                      _buildResultHeader(filteredEvents.length, request),
-                      ...filteredEvents.map(
-                        (event) => EventCard(
-                          event: event,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EventDetailPage(eventId: event.id),
-                              ),
-                            );
-                          },
+                      const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to load events\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => _refreshData(request),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: children,
+              );
+            }
+
+            final events = snapshot.data ?? [];
+            final filteredEvents = _applyLocalFilters(events);
+
+            if (events.isEmpty) {
+              children.addAll(const [
+                SizedBox(height: 80),
+                Center(child: Text("Tidak ada event ditemukan di PWS.")),
+              ]);
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: children,
+              );
+            }
+
+            if (filteredEvents.isEmpty) {
+              children.add(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  child: Column(
+                    children: [
+                      _buildResultHeader(0, request),
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 14,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.search_off, size: 48, color: Color(0xFF9CA3AF)),
+                            const SizedBox(height: 12),
+                            const Text(
+                              "Tidak ada event yang cocok dengan filter.",
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "Coba hapus filter harga/kota atau cari olahraga lain.",
+                              style: TextStyle(color: Color(0xFF6B7280)),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton.icon(
+                              onPressed: () => _resetFilters(request),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text("Reset semua filter"),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
+                  ),
+                ),
+              );
+
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: children,
+              );
+            }
+
+            children.addAll(
+              [
+                _buildResultHeader(filteredEvents.length, request),
+                ...filteredEvents.map(
+                  (event) => Column(
+                    children: [
+                      EventCard(
+                        event: event,
+                        onTap: () => _openEventDetail(event, request),
+                      ),
+                      if (event.isOrganizer) _buildOrganizerQuickActions(event, request),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            );
+
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 12),
+              children: children,
+            );
+          },
+        ),
       ),
     );
   }
@@ -596,6 +821,59 @@ class _EventListPageState extends State<EventListPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOrganizerQuickActions(EventEntry event, CookieRequest request) {
+    final isAvailable = event.status.toLowerCase() == 'available';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          SizedBox(
+            width: 160,
+            child: OutlinedButton.icon(
+              onPressed: isAvailable
+                  ? null
+                  : () => _updateEventStatus(request, event: event, status: 'available'),
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('Mark Available'),
+            ),
+          ),
+          SizedBox(
+            width: 170,
+            child: OutlinedButton.icon(
+              onPressed: isAvailable
+                  ? () => _updateEventStatus(request, event: event, status: 'unavailable')
+                  : null,
+              icon: const Icon(Icons.block),
+              label: const Text('Mark Unavailable'),
+            ),
+          ),
+          SizedBox(
+            width: 120,
+            child: OutlinedButton.icon(
+              onPressed: () => _deleteEvent(request, event: event),
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
+              label: const Text('Delete'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 120,
+            child: OutlinedButton.icon(
+              onPressed: () => _openEditEvent(event, request),
+              icon: const Icon(Icons.edit),
+              label: const Text('Edit'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -760,15 +1038,13 @@ class _EventListPageState extends State<EventListPage> {
                       setState(() => _activeTab = 'all');
                       _refreshData(request);
                     }),
-                    _buildTabPill("My Bookings", "bookings", onTap: () async {
+                    _buildTabPill("My Bookings", "bookings", onTap: () {
                       setState(() => _activeTab = 'bookings');
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MyBookingsPage()),
-                      );
+                      _refreshData(request);
                     }),
                     _buildTabPill("Created Events", "created", onTap: () {
                       setState(() => _activeTab = 'created');
+                      _refreshData(request);
                     }),
                   ],
                 ),
@@ -881,5 +1157,41 @@ class _EventListPageState extends State<EventListPage> {
         ),
       ),
     );
+  }
+
+  String _stringifyMessage(dynamic message) {
+    if (message == null) return '';
+    if (message is String) return message;
+    if (message is List) return message.join(', ');
+    return message.toString();
+  }
+
+  Map<String, String> _stringifyBody(Map<String, dynamic> body) {
+    return body.map((key, value) {
+      if (value is List) return MapEntry(key, jsonEncode(value));
+      return MapEntry(key, value?.toString() ?? '');
+    });
+  }
+
+  Map<String, String> _sessionHeaders(CookieRequest request, {bool json = false}) {
+    final cookieHeader = request.cookies.entries
+        .map((e) {
+          final val = e.value is Cookie ? (e.value as Cookie).value : e.value.toString();
+          return '${e.key}=$val';
+        })
+        .join('; ');
+    final headers = <String, String>{
+      'Cookie': cookieHeader,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': baseUrl,
+      'Origin': baseUrl,
+    };
+    final csrf = request.cookies['csrftoken'];
+    if (csrf != null) {
+      final token = csrf is Cookie ? csrf.value : csrf.toString();
+      headers['X-CSRFToken'] = token;
+    }
+    if (json) headers['Content-Type'] = 'application/json';
+    return headers;
   }
 }
