@@ -9,6 +9,7 @@ import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
 import 'package:move_buddy/Event/models/event_entry.dart';
 import 'package:move_buddy/Event/screens/event_detail_page.dart';
 import 'package:move_buddy/Event/screens/add_event_form.dart';
+import 'package:move_buddy/Event/screens/edit_event_form.dart';
 import 'package:move_buddy/Event/widgets/event_card.dart';
 import 'package:move_buddy/Event/utils/event_helpers.dart';
 import 'package:move_buddy/Sport_Partner/constants.dart';
@@ -494,22 +495,13 @@ class _EventListPageState extends State<EventListPage> {
   }
 
   Future<void> _openEditEvent(EventEntry event, CookieRequest request) async {
-    EventEntry? detailed = await _fetchEventDetailForEdit(request, eventId: event.id);
+    // Prefer fresh detail but fallback to existing data
+    EventEntry? detailed = await _fetchEventDetailForEdit(request, eventId: event.id) ?? event;
     if (!mounted) return;
-
-    if (detailed == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal memuat detail lengkap, memakai data terakhir.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      detailed = event;
-    }
 
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => AddEventForm(initialEvent: detailed)),
+      MaterialPageRoute(builder: (context) => EditEventForm(event: detailed!)),
     );
 
     if (result == true && mounted) {
@@ -521,10 +513,11 @@ class _EventListPageState extends State<EventListPage> {
   }
 
   Future<void> _openEventDetail(EventEntry event, CookieRequest request) async {
+    final parsedId = int.tryParse(event.id) ?? 0;
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => EventDetailPage(eventId: event.id),
+        builder: (context) => EventDetailPage(eventId: parsedId),
       ),
     );
     if (changed == true && mounted) {
