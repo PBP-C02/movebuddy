@@ -404,6 +404,18 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
       color: Color(0xFF182435),
     );
 
+    BoxDecoration _cardDecoration() => BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
@@ -411,17 +423,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
+            decoration: _cardDecoration(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -485,22 +487,22 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: _openCreateCoach,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB7DC81),
-                        foregroundColor: const Color(0xFF182435),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 14,
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: _openCreateCoach,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB7DC81),
+                          foregroundColor: const Color(0xFF182435),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Tambah Coach'),
                       ),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Tambah Coach'),
                     ),
                   ],
                 ),
@@ -540,42 +542,21 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                InkWell(
-                  onTap: () {
-                    setState(() => _availableOnly = !_availableOnly);
-                    _applyFilters();
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: _availableOnly,
-                        onChanged: (value) {
-                          setState(() => _availableOnly = value ?? false);
-                          _applyFilters();
-                        },
-                        activeColor: const Color(0xFFB7DC81),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      const Text(
-                        'Hanya tampilkan yang tersedia',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF5F6C7B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: _cardDecoration(),
+            child: Column(
+              children: [
                 Row(
                   children: [
                     Expanded(
-                      child: _SegmentButton(
-                        label: 'All',
+                  child: _SegmentButton(
+                        label: 'All Classes',
                         selected: _viewMode == 'all',
                         onTap: () => _toggleViewMode('all'),
                       ),
@@ -598,7 +579,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
@@ -665,19 +646,49 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () {
+                    setState(() => _availableOnly = !_availableOnly);
+                    _applyFilters();
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _availableOnly,
+                        onChanged: (value) {
+                          setState(() => _availableOnly = value ?? false);
+                          _applyFilters();
+                        },
+                        activeColor: const Color(0xFFB7DC81),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const Text(
+                        'Hanya tampilkan yang tersedia',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF5F6C7B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _openPriceFilterSheet,
                     style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB7DC81),
-                  foregroundColor: const Color(0xFF182435),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
+                      backgroundColor: const Color(0xFFB7DC81),
+                      foregroundColor: const Color(0xFF182435),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
