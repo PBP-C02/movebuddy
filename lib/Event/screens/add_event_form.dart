@@ -1,7 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
@@ -581,13 +579,6 @@ class _AddEventFormState extends State<AddEventForm> {
     );
   }
 
-  Map<String, String> _stringifyBody(Map<String, dynamic> body) {
-    return body.map((key, value) {
-      if (value is List) return MapEntry(key, jsonEncode(value));
-      return MapEntry(key, value?.toString() ?? '');
-    });
-  }
-
   String _stringifyMessage(dynamic message) {
     if (message == null) return '';
     if (message is String) return message;
@@ -595,85 +586,18 @@ class _AddEventFormState extends State<AddEventForm> {
     return message.toString();
   }
 
-  Map<String, String> _sessionHeaders(CookieRequest request) {
-    final cookieHeader = request.cookies.entries
-        .map((e) {
-          final val = e.value is Cookie ? (e.value as Cookie).value : e.value.toString();
-          return '${e.key}=$val';
-        })
-        .join('; ');
-    final headers = <String, String>{
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Cookie': cookieHeader,
-      'X-Requested-With': 'XMLHttpRequest',
-      'Referer': baseUrl,
-      'Origin': baseUrl,
-    };
-    final csrf = request.cookies['csrftoken'];
-    if (csrf != null) {
-      final token = csrf is Cookie ? csrf.value : csrf.toString();
-      headers['X-CSRFToken'] = token;
-    }
-    return headers;
-  }
-
   Future<dynamic> _submitEvent(
     CookieRequest request,
     Map<String, dynamic> payload,
   ) async {
-    if (!isEdit) {
-      return _postJsonWithCookies(
-        request,
-        "$baseUrl/event/json/create/",
-        payload,
-      );
-    }
+    final url = isEdit
+        ? "$baseUrl/event/json/${widget.initialEvent!.id}/edit/"
+        : "$baseUrl/event/json/create/";
 
-    final body = _stringifyBody(payload);
-    final url = Uri.parse("$baseUrl/event/${widget.initialEvent!.id}/edit/");
-
-    final response = await http.post(
+    // Use CookieRequest so session cookies/CSRF stay in sync with login state
+    return request.postJson(
       url,
-      headers: _sessionHeaders(request),
-      body: body,
+      jsonEncode(payload),
     );
-
-    try {
-      return jsonDecode(response.body);
-    } on FormatException {
-      return {
-        'success': false,
-        'message': _formatInvalidResponse(response.body),
-      };
-    }
-  }
-
-  Future<dynamic> _postJsonWithCookies(
-    CookieRequest request,
-    String url,
-    Map<String, dynamic> payload,
-  ) async {
-    final headers = _sessionHeaders(request);
-    headers['Content-Type'] = 'application/json';
-
-    final response = await http.post(
-      Uri.parse(url),
-      headers: headers,
-      body: jsonEncode(payload),
-    );
-
-    try {
-      return jsonDecode(response.body);
-    } on FormatException {
-      return {
-        'success': false,
-        'message': _formatInvalidResponse(response.body),
-      };
-    }
-  }
-
-  String _formatInvalidResponse(String body) {
-    final snippet = body.length > 160 ? body.substring(0, 160) : body;
-    return 'Respon tidak valid dari server (HTML). Snippet: ${snippet.replaceAll('\n', ' ')}';
   }
 }

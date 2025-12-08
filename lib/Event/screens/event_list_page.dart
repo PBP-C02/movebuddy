@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
@@ -356,59 +354,6 @@ class _EventListPageState extends State<EventListPage> {
     );
   }
 
-  Future<void> _updateEventStatus(
-    CookieRequest request, {
-    required EventEntry event,
-    required String status,
-  }) async {
-    final isAvailable = status.toLowerCase() == 'available';
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/event/${event.id}/ajax/toggle-availability/'),
-        headers: _sessionHeaders(request, json: true),
-        body: jsonEncode({'is_available': isAvailable}),
-      );
-
-      if (!mounted) return;
-
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is Map && decoded['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_stringifyMessage(decoded['message'] ?? 'Status updated'))),
-        );
-        _refreshData(request);
-        return;
-      }
-
-      final snippet = response.body.substring(0, response.body.length > 140 ? 140 : response.body.length);
-      final message = _stringifyMessage(
-        (decoded is Map ? decoded['message'] : null) ??
-            (snippet.isNotEmpty ? 'Respon tidak valid: $snippet' : 'Gagal memperbarui status event.'),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
-    } on FormatException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sesi mungkin habis atau endpoint salah. Coba login ulang.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memperbarui status: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   Future<void> _deleteEvent(
     CookieRequest request, {
     required EventEntry event,
@@ -436,15 +381,10 @@ class _EventListPageState extends State<EventListPage> {
     if (confirm != true) return;
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/event/${event.id}/ajax/delete/'),
-        headers: _sessionHeaders(request),
-        body: _stringifyBody({}),
+      final decoded = await request.post(
+        '$baseUrl/event/json/${event.id}/delete/',
+        {},
       );
-
-      if (!mounted) return;
-
-      final decoded = jsonDecode(response.body);
       final success = decoded is Map && decoded['success'] == true;
       final message = _stringifyMessage(
         (decoded is Map ? decoded['message'] : null) ?? 'Gagal menghapus event.',
@@ -819,33 +759,12 @@ class _EventListPageState extends State<EventListPage> {
   }
 
   Widget _buildOrganizerQuickActions(EventEntry event, CookieRequest request) {
-    final isAvailable = event.status.toLowerCase() == 'available';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
-          SizedBox(
-            width: 160,
-            child: OutlinedButton.icon(
-              onPressed: isAvailable
-                  ? null
-                  : () => _updateEventStatus(request, event: event, status: 'available'),
-              icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Mark Available'),
-            ),
-          ),
-          SizedBox(
-            width: 170,
-            child: OutlinedButton.icon(
-              onPressed: isAvailable
-                  ? () => _updateEventStatus(request, event: event, status: 'unavailable')
-                  : null,
-              icon: const Icon(Icons.block),
-              label: const Text('Mark Unavailable'),
-            ),
-          ),
           SizedBox(
             width: 120,
             child: OutlinedButton.icon(
@@ -1157,34 +1076,5 @@ class _EventListPageState extends State<EventListPage> {
     if (message is String) return message;
     if (message is List) return message.join(', ');
     return message.toString();
-  }
-
-  Map<String, String> _stringifyBody(Map<String, dynamic> body) {
-    return body.map((key, value) {
-      if (value is List) return MapEntry(key, jsonEncode(value));
-      return MapEntry(key, value?.toString() ?? '');
-    });
-  }
-
-  Map<String, String> _sessionHeaders(CookieRequest request, {bool json = false}) {
-    final cookieHeader = request.cookies.entries
-        .map((e) {
-          final val = e.value is Cookie ? (e.value as Cookie).value : e.value.toString();
-          return '${e.key}=$val';
-        })
-        .join('; ');
-    final headers = <String, String>{
-      'Cookie': cookieHeader,
-      'X-Requested-With': 'XMLHttpRequest',
-      'Referer': baseUrl,
-      'Origin': baseUrl,
-    };
-    final csrf = request.cookies['csrftoken'];
-    if (csrf != null) {
-      final token = csrf is Cookie ? csrf.value : csrf.toString();
-      headers['X-CSRFToken'] = token;
-    }
-    if (json) headers['Content-Type'] = 'application/json';
-    return headers;
   }
 }

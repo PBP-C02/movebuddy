@@ -280,8 +280,6 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 ),
               );
               if (result == true) fetchEventDetail();
-            } else if (value == 'toggle') {
-              toggleAvailability(request);
             } else if (value == 'delete') {
               deleteEvent(request);
             }
@@ -294,19 +292,6 @@ class _EventDetailPageState extends State<EventDetailPage> {
                   Icon(Icons.edit, color: Color(0xFF64748B)),
                   SizedBox(width: 12),
                   Text('Edit Event'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: 'toggle',
-              child: Row(
-                children: [
-                  Icon(
-                    event!.status == 'available' ? Icons.block : Icons.check_circle,
-                    color: const Color(0xFF64748B),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(event!.status == 'available' ? 'Mark Unavailable' : 'Mark Available'),
                 ],
               ),
             ),
