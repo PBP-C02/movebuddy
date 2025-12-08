@@ -145,7 +145,7 @@ class _EditPostPageState extends State<EditPostPage> {
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       final response = await request.postJson(
-                        "$baseUrl/sport_partner/post/${widget.post.postId}/edit-json/",
+                        "$baseUrl/post/${widget.post.postId}/edit-json/",
                         jsonEncode({
                           'title': _title,
                           'description': _description,

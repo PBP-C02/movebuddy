@@ -192,7 +192,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       }
 
                       final response = await request.postJson(
+<<<<<<< HEAD
                         "$baseUrl/sport_partner/create-post/",
+=======
+                        "$baseUrl/create-post/",
+>>>>>>> ce25ff446ab37d372e636e70a95f77b40e497dd5
                         jsonEncode(<String, String>{
                           'title': _title,
                           'description': _description,

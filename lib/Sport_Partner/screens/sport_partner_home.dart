@@ -77,7 +77,7 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
   Future<List<PartnerPost>> fetchPosts(CookieRequest request) async {
     // Membangun Query String secara manual agar backend bisa memfilter
     // Pastikan view Django Anda menangani request.GET.get('q'), request.GET.get('sport'), dst.
-    String url = '$baseUrl/sport_partner/json/?';
+    String url = '$baseUrl/json/?';
     
     if (_searchQuery.isNotEmpty) url += 'q=$_searchQuery&';
     if (_selectedSport.isNotEmpty) url += 'sport=$_selectedSport&';
