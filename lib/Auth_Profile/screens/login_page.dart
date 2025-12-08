@@ -18,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-  final String baseUrl = 'http://127.0.0.1:8000';
+  final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id';
   @override
   Widget build(BuildContext context) {
     final request = context.watch<CookieRequest>();
