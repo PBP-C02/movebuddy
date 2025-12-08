@@ -6,9 +6,11 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Event/utils/event_helpers.dart';
 import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:move_buddy/Event/models/event_entry.dart';
 
 class AddEventForm extends StatefulWidget {
-  const AddEventForm({super.key});
+  final EventEntry? initialEvent;
+  const AddEventForm({super.key, this.initialEvent});
 
   @override
   State<AddEventForm> createState() => _AddEventFormState();
@@ -29,6 +31,13 @@ class _AddEventFormState extends State<AddEventForm> {
   String _category = "category 1";
   String _status = "available";
 
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _entryPriceController = TextEditingController();
+  final TextEditingController _activitiesController = TextEditingController();
+  final TextEditingController _ratingController = TextEditingController();
+  final TextEditingController _googleMapsController = TextEditingController();
   final TextEditingController _photoUrlController = TextEditingController();
   Uint8List? _uploadedImageBytes;
   String? _uploadedImageDataUrl;
@@ -38,6 +47,13 @@ class _AddEventFormState extends State<AddEventForm> {
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _addressController.dispose();
+    _entryPriceController.dispose();
+    _activitiesController.dispose();
+    _ratingController.dispose();
+    _googleMapsController.dispose();
     _photoUrlController.dispose();
     super.dispose();
   }
@@ -45,9 +61,43 @@ class _AddEventFormState extends State<AddEventForm> {
   @override
   void initState() {
     super.initState();
+    _prefillFromEvent();
     EventHelpers.ensureLocaleInitialized().then((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  bool get isEdit => widget.initialEvent != null;
+
+  void _prefillFromEvent() {
+    final event = widget.initialEvent;
+    if (event == null) return;
+
+    _name = event.name;
+    _sportType = event.sportType.isNotEmpty ? event.sportType : _sportType;
+    _description = event.description;
+    _city = event.city;
+    _fullAddress = event.fullAddress;
+    _entryPrice = event.entryPrice;
+    _activities = event.activities;
+    _rating = event.rating;
+    _googleMapsLink = event.googleMapsLink;
+    _category = event.category.isNotEmpty ? event.category : _category;
+    _status = event.status.isNotEmpty ? event.status : _status;
+
+    _nameController.text = _name;
+    _descriptionController.text = _description;
+    _addressController.text = _fullAddress;
+    _entryPriceController.text = _entryPrice;
+    _activitiesController.text = _activities;
+    _ratingController.text = _rating;
+    _googleMapsController.text = _googleMapsLink;
+    if (event.photoUrl.isNotEmpty) {
+      _photoUrlController.text = event.photoUrl;
+    }
+    if (event.schedules != null) {
+      selectedDates = event.schedules!.map((e) => e.date).toList();
+    }
   }
 
   Future<void> selectDates() async {
@@ -189,9 +239,9 @@ class _AddEventFormState extends State<AddEventForm> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black87,
-        title: const Text(
-          "Add Event",
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          isEdit ? "Edit Event" : "Add Event",
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -223,7 +273,8 @@ class _AddEventFormState extends State<AddEventForm> {
                   _buildTextField(
                     label: 'Nama Event',
                     hint: 'Weekend Soccer Match',
-                    onChanged: (value) => setState(() => _name = value),
+                    controller: _nameController,
+                    onChanged: (value) => _name = value,
                     validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
                   ),
                   const SizedBox(height: 12),
@@ -243,7 +294,8 @@ class _AddEventFormState extends State<AddEventForm> {
                     label: 'Deskripsi',
                     hint: 'Ceritakan event kamu...',
                     maxLines: 3,
-                    onChanged: (value) => setState(() => _description = value),
+                    controller: _descriptionController,
+                    onChanged: (value) => _description = value,
                   ),
                   const SizedBox(height: 18),
                   const Text(
@@ -301,14 +353,16 @@ class _AddEventFormState extends State<AddEventForm> {
                     label: 'Alamat Lengkap',
                     hint: 'Tuliskan alamat detail',
                     maxLines: 2,
-                    onChanged: (value) => setState(() => _fullAddress = value),
+                    controller: _addressController,
+                    onChanged: (value) => _fullAddress = value,
                     validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
                   ),
                   const SizedBox(height: 12),
                   _buildTextField(
                     label: 'Link Google Maps (opsional)',
                     hint: 'https://maps.google.com/...',
-                    onChanged: (value) => setState(() => _googleMapsLink = value),
+                    controller: _googleMapsController,
+                    onChanged: (value) => _googleMapsLink = value,
                   ),
                   const SizedBox(height: 18),
                   const Text(
@@ -320,21 +374,24 @@ class _AddEventFormState extends State<AddEventForm> {
                     label: 'Harga Tiket (IDR)',
                     hint: '50000',
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => setState(() => _entryPrice = value),
+                    controller: _entryPriceController,
+                    onChanged: (value) => _entryPrice = value,
                     validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
                   ),
                   const SizedBox(height: 12),
                   _buildTextField(
                     label: 'Aktivitas / Fasilitas (pisahkan koma)',
                     hint: 'Basket court, Shower, Locker',
-                    onChanged: (value) => setState(() => _activities = value),
+                    controller: _activitiesController,
+                    onChanged: (value) => _activities = value,
                   ),
                   const SizedBox(height: 12),
                   _buildTextField(
                     label: 'Rating (0-5)',
                     hint: '5',
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => setState(() => _rating = value),
+                    controller: _ratingController,
+                    onChanged: (value) => _rating = value,
                   ),
                   const SizedBox(height: 18),
                   const Text(
@@ -396,36 +453,50 @@ class _AddEventFormState extends State<AddEventForm> {
                               : (_uploadedImageDataUrl ?? "");
 
                           try {
-                            final response = await request.postJson(
-                              "$baseUrl/event/json/create/",
-                              jsonEncode({
-                                'name': _name,
-                                'sport_type': _sportType,
-                                'description': _description,
-                                'city': _city,
-                                'full_address': _fullAddress,
-                                'entry_price': _entryPrice,
-                                'activities': _activities,
-                                'rating': _rating,
-                                'google_maps_link': _googleMapsLink,
-                                'category': _category,
-                                'status': _status,
-                                'schedule_dates': scheduleDates,
-                                'photo_url': photoToSend,
-                              }),
-                            );
+                          final payload = {
+                            'name': _name,
+                            'sport_type': _sportType,
+                            'description': _description,
+                            'city': _city,
+                            'full_address': _fullAddress,
+                            'entry_price': _entryPrice,
+                            'activities': _activities,
+                            'rating': _rating,
+                            'google_maps_link': _googleMapsLink,
+                            'category': _category,
+                            'status': _status,
+                            'schedule_dates': scheduleDates,
+                            'photo_url': photoToSend,
+                          };
 
-                            if (context.mounted) {
-                              if (response['success'] == true) {
-                                _showSnackBar('Event created successfully!');
+                          final response = await _submitEvent(request, payload);
+
+                          if (context.mounted) {
+                            if (response is Map && response['success'] == true) {
+                              _showSnackBar(
+                                widget.initialEvent == null
+                                      ? 'Event created successfully!'
+                                      : 'Event updated successfully!',
+                                );
                                 Navigator.pop(context, true);
                               } else {
-                                _showSnackBar(response['message'] ?? 'Failed', isError: true);
+                                final message = _stringifyMessage(
+                                  (response is Map ? response['message'] : null) ??
+                                      'Failed to ${widget.initialEvent == null ? 'create' : 'update'} event',
+                                );
+                                _showSnackBar(message, isError: true);
                               }
+                            }
+                          } on FormatException catch (e) {
+                            if (context.mounted) {
+                              _showSnackBar(
+                                'Respon tidak valid (mungkin sesi kadaluarsa atau server mengembalikan HTML): $e',
+                                isError: true,
+                              );
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              _showSnackBar('Error: $e', isError: true);
+                              _showSnackBar(_stringifyMessage(e), isError: true);
                             }
                           }
                         }
@@ -505,6 +576,28 @@ class _AddEventFormState extends State<AddEventForm> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
+    );
+  }
+
+  String _stringifyMessage(dynamic message) {
+    if (message == null) return '';
+    if (message is String) return message;
+    if (message is List) return message.join(', ');
+    return message.toString();
+  }
+
+  Future<dynamic> _submitEvent(
+    CookieRequest request,
+    Map<String, dynamic> payload,
+  ) async {
+    final url = isEdit
+        ? "$baseUrl/event/json/${widget.initialEvent!.id}/edit/"
+        : "$baseUrl/event/json/create/";
+
+    // Use CookieRequest so session cookies/CSRF stay in sync with login state
+    return request.postJson(
+      url,
+      jsonEncode(payload),
     );
   }
 }
