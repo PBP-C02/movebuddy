@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 
+
 import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
 import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
 
@@ -58,14 +59,14 @@ class _RootPageState extends State<RootPage> {
   }
 
   void _initUrl() {
-      baseUrl = "http://127.0.0.1:8000";
+      baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id";
 
   }
 
   Future<void> checkSession() async {
     final request = context.read<CookieRequest>();
     try {
-      final response = await request.get("$baseUrl/auth_profile/check-session/");
+      final response = await request.get("$baseUrl/check-session/");
 
       if (mounted) {
         if (request.loggedIn || (response is Map && response['status'] == true)) {

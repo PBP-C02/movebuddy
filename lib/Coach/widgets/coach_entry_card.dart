@@ -24,94 +24,93 @@ class CoachEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = coach.isBooked
-        ? Colors.red.shade100
-        : Colors.green.shade100;
-    final statusTextColor = coach.isBooked
-        ? Colors.red.shade800
-        : Colors.green.shade800;
+    final isAvailable = !coach.isBooked;
+    final statusColor =
+        isAvailable ? const Color(0xFFDFF5E0) : const Color(0xFFFFE6E3);
+    final statusTextColor =
+        isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: Colors.grey.shade200),
-          ),
-          elevation: 3,
-          clipBehavior: Clip.antiAlias,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Material(
+        color: Colors.white,
+        elevation: 4,
+        borderRadius: BorderRadius.circular(22),
+        shadowColor: Colors.black.withOpacity(0.08),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CoachHeaderImage(imageUrl: coach.imageUrl),
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(22),
+                  topRight: Radius.circular(22),
+                ),
+                child: _CoachHeaderImage(imageUrl: coach.imageUrl),
+              ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                coach.title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.person,
-                                    color: Colors.grey.shade600,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    coach.userName,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(10),
+                            color: statusColor,
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                size: 16,
-                                color: Colors.orange,
+                          child: Text(
+                            isAvailable ? 'Tersedia' : 'Sudah dibooking',
+                            style: TextStyle(
+                              color: statusTextColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            const Icon(Icons.star,
+                                size: 18, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              coach.rating.toStringAsFixed(1),
+                               style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                coach.rating.toString(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      coach.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.person, size: 16, color: Colors.grey),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            coach.userName,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -119,46 +118,32 @@ class CoachEntryCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
-                      runSpacing: 6,
+                      runSpacing: 8,
                       children: [
-                        _buildTag(
-                          icon: Icons.sports,
+                        _buildPill(
+                          icon: Icons.sports_handball,
                           label: coach.category,
-                          background: Colors.blue.shade50,
-                          foreground: Colors.blue.shade800,
+                          color: const Color(0xFFB7DC81),
+                          textColor: const Color(0xFF182435),
                         ),
-                        _buildTag(
+                        _buildPill(
                           icon: Icons.place,
                           label: coach.location,
-                          background: Colors.purple.shade50,
-                          foreground: Colors.purple.shade800,
-                        ),
-                        _buildTag(
-                          icon: coach.isBooked
-                              ? Icons.lock_clock
-                              : Icons.event_available,
-                          label: coach.isBooked
-                              ? 'Sudah dibooking'
-                              : 'Tersedia',
-                          background: statusColor,
-                          foreground: statusTextColor,
+                          color: const Color(0xFF607D8B),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.calendar_month,
-                          size: 16,
-                          color: Colors.grey.shade600,
-                        ),
+                        const Icon(Icons.calendar_month,
+                            size: 18, color: Colors.grey),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             '${_formatDate(coach.date)} | ${coach.startTime} - ${coach.endTime}',
-                            style: const TextStyle(fontSize: 13),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -167,23 +152,20 @@ class CoachEntryCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 16,
-                          color: Colors.grey.shade600,
-                        ),
+                        const Icon(Icons.location_on_outlined,
+                            size: 18, color: Colors.grey),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             coach.address,
-                            style: const TextStyle(fontSize: 13),
+                            style: TextStyle(color: Colors.grey.shade700),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -192,30 +174,39 @@ class CoachEntryCard extends StatelessWidget {
                             children: [
                               Text(
                                 'Biaya per sesi',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade700,
-                                ),
+                                style: TextStyle(color: Colors.grey.shade600),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 6),
                               Text(
                                 'Rp ${_formatPrice(coach.price)}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: onTap,
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.green.shade700,
+                        SizedBox(
+                          height: 44,
+                          child: ElevatedButton(
+                            onPressed: onTap,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E2E2E),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Lihat Detail',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
                           ),
-                          icon: const Icon(Icons.chevron_right),
-                          label: const Text('Lihat detail'),
                         ),
                       ],
                     ),
@@ -229,29 +220,31 @@ class CoachEntryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTag({
+  Widget _buildPill({
     required IconData icon,
     required String label,
-    required Color background,
-    required Color foreground,
+    required Color color,
+    Color? textColor,
   }) {
+    final effectiveText = textColor ?? color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(12),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: foreground),
+          Icon(icon, size: 14, color: effectiveText),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: foreground,
+              fontWeight: FontWeight.w700,
+              color: effectiveText,
             ),
           ),
         ],
@@ -267,22 +260,34 @@ class _CoachHeaderImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget child;
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return Image.network(
+      child = Image.network(
         imageUrl!,
         width: double.infinity,
-        height: 180,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => _placeholder(),
       );
+    } else {
+      child = _placeholder();
     }
-    return _placeholder();
+
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: child,
+      ),
+    );
   }
 
   Widget _placeholder() {
     return Container(
       width: double.infinity,
-      height: 180,
       color: Colors.grey.shade200,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

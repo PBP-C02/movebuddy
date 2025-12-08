@@ -19,6 +19,14 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    EventHelpers.ensureLocaleInitialized().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final request = context.watch<CookieRequest>();
 
@@ -112,7 +120,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => EventDetailPage(eventId: event['id']),
+                          builder: (context) => EventDetailPage(eventId: event['id'].toString()),
                         ),
                       );
                     },
