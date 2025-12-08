@@ -35,7 +35,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     // Gunakan try-catch untuk handle error koneksi
     try {
       final response = await request.post(
-        '$baseUrl/sport_partner/post/${currentPost.postId}/$urlType/',
+        '$baseUrl/post/${currentPost.postId}/$urlType/',
         {},
       );
 
@@ -72,7 +72,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Future<void> deletePost(CookieRequest request) async {
     try {
       final response = await request.post(
-        '$baseUrl/sport_partner/post/${currentPost.postId}/delete-json/',
+        '$baseUrl/post/${currentPost.postId}/delete-json/',
         {},
       );
 
