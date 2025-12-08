@@ -4,6 +4,8 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:move_buddy/Auth_Profile/screens/register_page.dart';
 import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
+import 'package:move_buddy/Sport_Partner/constants.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-  final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/';
+  final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id';
   @override
   Widget build(BuildContext context) {
     final request = context.watch<CookieRequest>();

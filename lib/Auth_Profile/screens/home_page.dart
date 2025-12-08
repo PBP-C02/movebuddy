@@ -15,6 +15,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+
   final String baseUrl = 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id/';
 
   Future<void> _logout() async {

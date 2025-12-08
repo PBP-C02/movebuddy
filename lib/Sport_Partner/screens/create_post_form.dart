@@ -191,9 +191,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         return;
                       }
 
-                      // Kirim data ke Django (Paket dikirim kurir)
-                      // GANTI URL INI DENGAN URL DEPLOY ATAU LOCALHOST ANDA
-                      // Jangan lupa / di akhir URL jika di urls.py Anda pakai slash
                       final response = await request.postJson(
                         "$baseUrl/create-post/",
                         jsonEncode(<String, String>{
