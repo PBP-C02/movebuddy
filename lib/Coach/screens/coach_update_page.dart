@@ -131,6 +131,19 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
+  String _normalizeUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+    final hasScheme =
+        trimmed.startsWith('http://') || trimmed.startsWith('https://');
+    final withScheme = hasScheme ? trimmed : 'https://$trimmed';
+    final encoded = withScheme.replaceAll(' ', '%20');
+    final uri = Uri.tryParse(encoded);
+    if (uri == null || uri.scheme.isEmpty || uri.host.isEmpty) {
+      return '';
+    }
+    return uri.toString();
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -204,7 +217,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
       return;
     }
 
-    final mapsLink = _mapsController.text.trim();
+    final mapsLink = _normalizeUrl(_mapsController.text);
     if (mapsLink.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -237,6 +250,8 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
       '',
     );
 
+    final instagramLink = _normalizeUrl(_instagramController.text);
+
     final payload = <String, String>{
       'id': widget.coach.id,
       'title': _titleController.text.trim(),
@@ -249,7 +264,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
       'startTime': startStr,
       'endTime': endStr,
       'rating': _rating.toStringAsFixed(1),
-      'instagram_link': _instagramController.text.trim(),
+      'instagram_link': instagramLink,
       'mapsLink': mapsLink,
     };
 
