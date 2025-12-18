@@ -36,20 +36,24 @@ class PartnerPost {
     });
 
     factory PartnerPost.fromJson(Map<String, dynamic> json) => PartnerPost(
+        // toString() adalah pengaman. Walaupun backend kirim int, UUID, atau string, ini akan tetap jalan.
         postId: json["post_id"]?.toString() ?? "",
-        creatorName: json["creator_name"] ?? "Unknown",
+        creatorName: json["creator_name"]?.toString() ?? "Unknown",
         creatorId: json["creator_id"]?.toString() ?? "0",
-        title: json["title"] ?? "No Title",
-        description: json["description"] ?? "-",
-        category: json["category"] ?? "General",
-        // Handle tanggal error
-        tanggal: json["tanggal"] != null ? DateTime.parse(json["tanggal"]) : DateTime.now(),
-        jamMulai: json["jam_mulai"] ?? "00:00",
-        jamSelesai: json["jam_selesai"] ?? "00:00",
-        lokasi: json["lokasi"] ?? "-",
-        totalParticipants: json["total_participants"] ?? 0,
+        title: json["title"]?.toString() ?? "No Title",
+        description: json["description"]?.toString() ?? "-",
+        category: json["category"]?.toString() ?? "General",
+        // Parsing tanggal dengan fallback ke waktu sekarang jika gagal/null
+        tanggal: json["tanggal"] != null 
+            ? DateTime.tryParse(json["tanggal"].toString()) ?? DateTime.now() 
+            : DateTime.now(),
+        jamMulai: json["jam_mulai"]?.toString() ?? "00:00",
+        jamSelesai: json["jam_selesai"]?.toString() ?? "00:00",
+        lokasi: json["lokasi"]?.toString() ?? "-",
+        // Pastikan angka benar-benar integer
+        totalParticipants: int.tryParse(json["total_participants"]?.toString() ?? "0") ?? 0,
         isParticipant: json["is_participant"] == true,
-        isCreator: json["is_creator"] == true, // Parse boolean aman
+        isCreator: json["is_creator"] == true,
     );
 
     Map<String, dynamic> toJson() => {
