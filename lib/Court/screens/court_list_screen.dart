@@ -333,7 +333,7 @@ class _CourtListScreenState extends State<CourtListScreen> {
                       ),
                       const SizedBox(width: 4),
                       const Text(
-                        "Show only available courts",
+                        "Available Only",
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],
