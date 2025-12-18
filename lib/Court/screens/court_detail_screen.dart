@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/court_models.dart';
 import '../helpers/court_api_helper.dart';
-import 'court_booking_screen.dart';
 import 'court_form_screen.dart';
 
 class CourtDetailScreen extends StatefulWidget {
@@ -19,14 +19,13 @@ class CourtDetailScreen extends StatefulWidget {
 
 class _CourtDetailScreenState extends State<CourtDetailScreen> {
   late Future<CourtDetail> _detailFuture;
-  
+
   // State Cek Jadwal
   DateTime _selectedDate = DateTime.now();
   bool _isInit = true;
   bool? _selectedDateAvailability;
   bool _isLoadingAvailability = false;
-  bool _canManageAvailability = false;
-  bool _isUpdatingAvailability = false;
+  bool _isUpdatingAvailability = false; // hanya untuk tombol owner
 
   @override
   void didChangeDependencies() {
@@ -45,18 +44,11 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
     _loadAvailabilityStatus(request);
   }
 
-  String _formatDateForApi(DateTime date) {
-    return DateFormat('yyyy-MM-dd').format(date);
-  }
-
-  String _formatDateForLabel(DateTime date) {
-    return DateFormat('d MMM yyyy').format(date);
-  }
+  String _formatDateForApi(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+  String _formatDateForLabel(DateTime date) => DateFormat('d MMM yyyy').format(date);
 
   Future<void> _loadAvailabilityStatus(CookieRequest request) async {
-    setState(() {
-      _isLoadingAvailability = true;
-    });
+    setState(() => _isLoadingAvailability = true);
     try {
       final status = await CourtApiHelper(request).fetchAvailabilityStatus(
         widget.courtId,
@@ -65,28 +57,21 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
       if (!mounted) return;
       setState(() {
         _selectedDateAvailability = status.available;
-        _canManageAvailability = status.canManage;
       });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _selectedDateAvailability = null;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal memuat status ketersediaan: $e")),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _selectedDateAvailability = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memuat status ketersediaan: $e")),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isLoadingAvailability = false);
-      }
+      if (mounted) setState(() => _isLoadingAvailability = false);
     }
   }
 
+  /// OWNER-ONLY: update availability.
   Future<void> _updateAvailabilityStatus(CookieRequest request, bool isAvailable) async {
-    setState(() {
-      _isUpdatingAvailability = true;
-    });
+    setState(() => _isUpdatingAvailability = true);
     try {
       final updated = await CourtApiHelper(request).setAvailability(
         widget.courtId,
@@ -96,7 +81,6 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
       if (!mounted) return;
       setState(() {
         _selectedDateAvailability = updated;
-        _canManageAvailability = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -106,15 +90,12 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
         ),
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal mengubah status: $e")),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal mengubah status: $e")),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isUpdatingAvailability = false);
-      }
+      if (mounted) setState(() => _isUpdatingAvailability = false);
     }
   }
 
@@ -143,8 +124,8 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
-            child: const Text("Hapus", style: TextStyle(color: Colors.red))
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -153,15 +134,116 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
     if (confirm == true) {
       try {
         await CourtApiHelper(request).deleteCourt(widget.courtId);
-        if (mounted) {
-          Navigator.pop(context); // Keluar dari detail
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lapangan dihapus")));
-        }
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lapangan dihapus")));
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal hapus: $e")));
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal hapus: $e")));
       }
+    }
+  }
+
+  // =========================
+  // WhatsApp open helpers
+  // =========================
+  Uri? _normalizeToHttps(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty) return null;
+    if (s.startsWith("https://") || s.startsWith("http://") || s.startsWith("whatsapp://")) {
+      return Uri.tryParse(s);
+    }
+    return Uri.tryParse("https://$s");
+  }
+
+  Uri? _buildWhatsappDeepLinkFrom(Uri httpsUrl) {
+    String? phone;
+    String? text;
+
+    final host = httpsUrl.host.toLowerCase();
+
+    if (host == "wa.me") {
+      if (httpsUrl.pathSegments.isNotEmpty) phone = httpsUrl.pathSegments.first.trim();
+      text = httpsUrl.queryParameters["text"];
+    } else if (host.contains("api.whatsapp.com")) {
+      phone = httpsUrl.queryParameters["phone"];
+      text = httpsUrl.queryParameters["text"];
+    }
+
+    if (phone == null || phone.isEmpty) return null;
+
+    phone = phone.replaceAll(RegExp(r"\D+"), "");
+    if (phone.isEmpty) return null;
+
+    final params = <String, String>{"phone": phone};
+    if (text != null && text.trim().isNotEmpty) params["text"] = text!;
+
+    return Uri(scheme: "whatsapp", host: "send", queryParameters: params);
+  }
+
+  Future<void> _openWhatsappFromServerLink(String rawUrl) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    final waMe = _normalizeToHttps(rawUrl);
+    if (waMe == null) {
+      messenger.showSnackBar(const SnackBar(content: Text("Link WhatsApp tidak valid.")));
+      return;
+    }
+
+    // 1) Paksa buka WA app dulu (deep link)
+    final deep = _buildWhatsappDeepLinkFrom(waMe);
+    if (deep != null) {
+      try {
+        final ok = await launchUrl(deep, mode: LaunchMode.externalApplication);
+        if (ok) return;
+      } catch (_) {
+        // lanjut fallback
+      }
+    }
+
+    // 2) Fallback: https
+    try {
+      final ok = await launchUrl(waMe, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        messenger.showSnackBar(SnackBar(content: Text("Gagal membuka WhatsApp.\n$waMe")));
+      }
+    } catch (_) {
+      if (mounted) messenger.showSnackBar(SnackBar(content: Text("Gagal membuka WhatsApp.\n$waMe")));
+    }
+  }
+
+  /// Ini yang dipanggil saat user klik "Booking Sekarang":
+  /// - TIDAK create booking
+  /// - Langsung generate WA link lalu open WA
+  Future<void> _directToWhatsapp(CookieRequest request, {required bool ownedByUser}) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (ownedByUser) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Owner tidak bisa booking court miliknya.")),
+      );
+      return;
+    }
+
+    final dateStr = _formatDateForApi(_selectedDate);
+
+    try {
+      final api = CourtApiHelper(request);
+      final waLink = await api.generateWhatsappLink(widget.courtId, dateStr: dateStr);
+
+      if (!mounted) return;
+
+      if (waLink == null || waLink.trim().isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text("Link WhatsApp tidak tersedia.")),
+        );
+        return;
+      }
+
+      await _openWhatsappFromServerLink(waLink);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text("Gagal membuka WhatsApp: $e")));
     }
   }
 
@@ -229,18 +311,28 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
           } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
           } else if (!snapshot.hasData) {
-             return const Center(child: Text("Data tidak ditemukan"));
+            return const Center(child: Text("Data tidak ditemukan"));
           }
 
           final detail = snapshot.data!;
           final basic = detail.basicInfo;
+
           final imageUrl = CourtApiHelper.resolveImageUrl(
             basic.imageUrl,
             placeholder: "https://via.placeholder.com/400x200",
           );
+
           final availabilityForSelectedDate = _selectedDateAvailability ?? basic.isAvailableToday;
-          final canManageAvailability = detail.ownedByUser || _canManageAvailability;
-          final bookingEnabled = !_isLoadingAvailability && availabilityForSelectedDate;
+
+          // Hanya owner yang boleh mengubah availability.
+          final canManageAvailability = detail.ownedByUser;
+
+          // Tombol booking hanya aktif jika:
+          // - status sudah kebaca
+          // - available
+          // - bukan owner
+          final bookingEnabled =
+              !_isLoadingAvailability && availabilityForSelectedDate && !detail.ownedByUser;
 
           return Column(
             children: [
@@ -412,19 +504,9 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                               const SizedBox(height: 16),
                               Row(
                                 children: [
-                                  Expanded(
-                                    child: _infoRow(
-                                      "Sport Type",
-                                      basic.sportType.isEmpty ? "-" : basic.sportType,
-                                    ),
-                                  ),
+                                  Expanded(child: _infoRow("Sport Type", basic.sportType.isEmpty ? "-" : basic.sportType)),
                                   const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _infoRow(
-                                      "Rating",
-                                      "${basic.rating.toStringAsFixed(2)} / 5",
-                                    ),
-                                  ),
+                                  Expanded(child: _infoRow("Rating", "${basic.rating.toStringAsFixed(2)} / 5")),
                                 ],
                               ),
                               const SizedBox(height: 10),
@@ -437,7 +519,10 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                               const SizedBox(height: 8),
                               _infoRow("Address", basic.address),
                               const SizedBox(height: 16),
-                              _infoRow("Description", detail.description.isEmpty ? "Tidak ada deskripsi." : detail.description),
+                              _infoRow(
+                                "Description",
+                                detail.description.isEmpty ? "Tidak ada deskripsi." : detail.description,
+                              ),
                               const SizedBox(height: 12),
                               const Text("Facilities", style: TextStyle(fontWeight: FontWeight.w700)),
                               const SizedBox(height: 8),
@@ -464,6 +549,8 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                               else
                                 const Text("-"),
                               const SizedBox(height: 16),
+
+                              // Owner card
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(14),
@@ -479,10 +566,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         const Text("Court Owner", style: TextStyle(color: Colors.black54, fontSize: 12)),
-                                        Text(
-                                          detail.ownerName,
-                                          style: const TextStyle(fontWeight: FontWeight.w700),
-                                        ),
+                                        Text(detail.ownerName, style: const TextStyle(fontWeight: FontWeight.w700)),
                                         Text(
                                           detail.ownerPhone.isEmpty ? "No phone provided" : detail.ownerPhone,
                                           style: const TextStyle(color: Colors.black54),
@@ -492,13 +576,24 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 18),
-                              const Text(
-                                "Owner Contact",
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(height: 8),
-                              _infoRow("Phone", detail.ownerPhone.isEmpty ? "Tidak tersedia" : detail.ownerPhone),
+
+                              // Owner warning
+                              if (detail.ownedByUser) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF3CD),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    "Anda adalah pemilik court ini. Pemilik tidak dapat melakukan booking pada court miliknya.",
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ],
+
                               const SizedBox(height: 16),
                               const Text(
                                 "Reserve Court",
@@ -571,6 +666,8 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                         ),
                                       ],
                                     ),
+
+                                    // OWNER ONLY controls
                                     if (canManageAvailability) ...[
                                       const SizedBox(height: 12),
                                       Row(
@@ -610,16 +707,12 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                           ),
                                         ],
                                       ),
-                                    ] else ...[
-                                      const SizedBox(height: 8),
-                                      const Text(
-                                        "Status hanya bisa diubah pemilik.",
-                                        style: TextStyle(color: Colors.black54, fontSize: 12),
-                                      ),
                                     ],
                                   ],
                                 ),
                               ),
+
+                              // Owner edit/delete
                               if (detail.ownedByUser) ...[
                                 const SizedBox(height: 16),
                                 Row(
@@ -643,9 +736,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                                           if (result == true) {
                                             _refreshDetail(request);
                                             if (!mounted) return;
-                                            messenger.showSnackBar(
-                                              const SnackBar(content: Text("Data berhasil diperbarui")),
-                                            );
+                                            messenger.showSnackBar(const SnackBar(content: Text("Data berhasil diperbarui")));
                                           }
                                         },
                                       ),
@@ -674,6 +765,8 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                   ),
                 ),
               ),
+
+              // Bottom primary action: DIRECT TO WA (no booking API)
               SafeArea(
                 top: false,
                 child: Padding(
@@ -687,19 +780,12 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      onPressed: (bookingEnabled)
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => CourtBookingScreen(courtId: widget.courtId, preSelectedDate: _selectedDate),
-                                ),
-                              );
-                            }
+                      onPressed: bookingEnabled
+                          ? () => _directToWhatsapp(request, ownedByUser: detail.ownedByUser)
                           : null,
-                      child: const Text(
-                        "Booking Sekarang",
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      child: Text(
+                        detail.ownedByUser ? "Owner tidak bisa booking" : "Booking Sekarang (Chat WA)",
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                       ),
                     ),
                   ),
@@ -718,10 +804,7 @@ class _CourtDetailScreenState extends State<CourtDetailScreen> {
       children: [
         Text(title, style: const TextStyle(color: Colors.black54)),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
     );
   }
