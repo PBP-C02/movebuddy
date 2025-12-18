@@ -36,7 +36,6 @@ class _EditEventFormState extends State<EditEventForm> {
   void initState() {
     super.initState();
 
-    // Initialize with existing event data
     _name = widget.event.name;
     _sportType = widget.event.sportType;
     _description = widget.event.description;
@@ -49,7 +48,6 @@ class _EditEventFormState extends State<EditEventForm> {
     _category = widget.event.category;
     _status = widget.event.status;
 
-    // Initialize selected dates from event schedules
     if (widget.event.schedules != null) {
       selectedDates = widget.event.schedules!.map((s) => s.date).toList();
     }
@@ -65,7 +63,7 @@ class _EditEventFormState extends State<EditEventForm> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF84CC16),
+              primary: Color(0xFF8BC34A),
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
@@ -97,7 +95,7 @@ class _EditEventFormState extends State<EditEventForm> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF84CC16),
+        backgroundColor: const Color(0xFF8BC34A),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -234,7 +232,7 @@ class _EditEventFormState extends State<EditEventForm> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Date'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF84CC16),
+                        backgroundColor: const Color(0xFF8BC34A),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -268,7 +266,7 @@ class _EditEventFormState extends State<EditEventForm> {
                 height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF84CC16),
+                    backgroundColor: const Color(0xFF8BC34A),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -367,7 +365,7 @@ class _EditEventFormState extends State<EditEventForm> {
         children: [
           Row(
             children: [
-              Icon(icon, color: const Color(0xFF84CC16), size: 24),
+              Icon(icon, color: const Color(0xFF8BC34A), size: 24),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -412,7 +410,7 @@ class _EditEventFormState extends State<EditEventForm> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF84CC16), width: 2),
+          borderSide: const BorderSide(color: Color(0xFF8BC34A), width: 2),
         ),
       ),
       maxLines: maxLines,
@@ -444,7 +442,7 @@ class _EditEventFormState extends State<EditEventForm> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF84CC16), width: 2),
+          borderSide: const BorderSide(color: Color(0xFF8BC34A), width: 2),
         ),
       ),
       items: items,
@@ -456,7 +454,7 @@ class _EditEventFormState extends State<EditEventForm> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : const Color(0xFF84CC16),
+        backgroundColor: isError ? Colors.red : const Color(0xFF8BC34A),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

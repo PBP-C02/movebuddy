@@ -173,7 +173,6 @@ class _AddEventFormState extends State<AddEventForm> {
           );
         }
       } catch (_) {
-        // Fallback to generic preview below
       }
     }
 
@@ -329,18 +328,6 @@ class _AddEventFormState extends State<AddEventForm> {
                   ),
                   const SizedBox(height: 12),
                   _buildPhotoPreview(),
-                  const SizedBox(height: 6),
-                  Text(
-                    _photoUrlController.text.trim().isNotEmpty
-                        ? 'Preview memakai link di atas. Kosongkan jika ingin memakai foto upload.'
-                        : _uploadedImageBytes != null
-                        ? 'Foto upload akan dikirim sebagai data URL.'
-                        : 'Tempel link atau upload dari perangkat.',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
                   const SizedBox(height: 18),
                   const Text(
                     "Lokasi",
@@ -632,7 +619,6 @@ class _AddEventFormState extends State<AddEventForm> {
         ? EventConfig.resolve('/event/json/${widget.initialEvent!.id}/edit/')
         : EventConfig.resolve('/event/json/create/');
 
-    // Use CookieRequest so session cookies/CSRF stay in sync with login state
     return request.postJson(url, jsonEncode(payload));
   }
 }

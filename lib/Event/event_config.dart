@@ -1,5 +1,4 @@
 class EventConfig {
-  // Base domain only (no app prefix), so Event endpoints resolve correctly.
   static const String baseUrl = String.fromEnvironment(
     'MOVE_BUDDY_BASE_URL',
     defaultValue: 'https://ari-darrell-movebuddy.pbp.cs.ui.ac.id',
@@ -11,4 +10,3 @@ class EventConfig {
     return Uri.parse(normalizedBase).resolve(normalizedPath).toString();
   }
 }
-
