@@ -10,7 +10,7 @@ import 'package:Movebuddy/Event/screens/add_event_form.dart';
 import 'package:Movebuddy/Event/screens/edit_event_form.dart';
 import 'package:Movebuddy/Event/widgets/event_card.dart';
 import 'package:Movebuddy/Event/utils/event_helpers.dart';
-import 'package:Movebuddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/event_config.dart';
 
 class EventListPage extends StatefulWidget {
   const EventListPage({super.key});
@@ -53,7 +53,7 @@ class _EventListPageState extends State<EventListPage> {
   }
 
   Future<List<EventEntry>> fetchEvents(CookieRequest request) async {
-    final uri = Uri.parse('$baseUrl/event/ajax/search/').replace(
+    final uri = Uri.parse(EventConfig.resolve('/event/ajax/search/')).replace(
       queryParameters: {
         if (_selectedSport.isNotEmpty) 'sport': _selectedSport,
         if (_availableOnly) 'available': 'true',
@@ -84,7 +84,9 @@ class _EventListPageState extends State<EventListPage> {
 
   Future<List<EventEntry>> fetchBookings(CookieRequest request) async {
     try {
-      final response = await request.get('$baseUrl/event/json/my-bookings/');
+      final response = await request.get(
+        EventConfig.resolve('/event/json/my-bookings/'),
+      );
       if (response is List) {
         final bookings = response
             .whereType<Map<String, dynamic>>()
@@ -411,7 +413,7 @@ class _EventListPageState extends State<EventListPage> {
 
     try {
       final decoded = await request.post(
-        '$baseUrl/event/json/${event.id}/delete/',
+        EventConfig.resolve('/event/json/${event.id}/delete/'),
         {},
       );
       final success = decoded is Map && decoded['success'] == true;
@@ -454,7 +456,9 @@ class _EventListPageState extends State<EventListPage> {
     required String eventId,
   }) async {
     try {
-      final response = await request.get('$baseUrl/event/json/$eventId/');
+      final response = await request.get(
+        EventConfig.resolve('/event/json/$eventId/'),
+      );
       if (response is Map) {
         return EventEntry.fromJson(Map<String, dynamic>.from(response));
       }
