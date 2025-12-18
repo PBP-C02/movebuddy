@@ -7,6 +7,10 @@
 - Ghozam Muliawan Solihin
 - Dimas Abyan Diasta
 
+## LINK DOWNLOAD APP
+- GitHub Release: https://github.com/PBP-C02/movebuddy/releases/download/v1.0.0%2B1-20251218143017/app-release.apk
+- Bitrise: https://app.bitrise.io/app/9609426f-c38e-417d-a9ba-f510c0b77a4d/installable-artifacts/dac43400c159251b/public-install-page/04f38d297c78453d6682833053c36897
+
 ## DESKRIPSI APLIKASI
 MoveBuddy merupakan aplikasi yang dapat digunakan untuk mencari teman, pelatih, event, dan juga lapangan untuk berolahraga dengan minat yang sama.
 
