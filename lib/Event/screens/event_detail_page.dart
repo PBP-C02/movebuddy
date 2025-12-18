@@ -34,7 +34,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       );
       setState(() {
         event = EventEntry.fromJson(response);
-        selectedScheduleId = null; // clear old selection after refresh
+        selectedScheduleId = null;
         isLoading = false;
       });
     } catch (e) {
@@ -204,7 +204,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
       if (mounted) {
         if (response['success']) {
           _showSnackBar(response['message']);
-          Navigator.pop(context, true); // Go back to event list
+          Navigator.pop(context, true);
         } else {
           _showSnackBar(response['message'], isError: true);
         }
@@ -236,58 +236,47 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 16),
-                  _buildMetaOverview(),
-                  const SizedBox(height: 16),
-                  if (event!.description.isNotEmpty) _buildDescription(),
-                  if (event!.description.isNotEmpty) const SizedBox(height: 16),
-                  _buildLocation(),
-                  const SizedBox(height: 16),
-                  if (event!.activities.isNotEmpty) _buildActivities(),
-                  if (event!.activities.isNotEmpty) const SizedBox(height: 16),
-                  if (event!.schedules != null && event!.schedules!.isNotEmpty)
-                    _buildSchedules(),
-                  if (event!.schedules != null && event!.schedules!.isNotEmpty)
-                    const SizedBox(height: 24),
-                  _buildActionButton(request),
-                  const SizedBox(height: 100),
-                ],
-              ),
-            ),
-          ),
-        ],
+      appBar: _buildTopAppBar(request),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeroImage(),
+            const SizedBox(height: 16),
+            _buildHeader(),
+            const SizedBox(height: 16),
+            _buildMetaOverview(),
+            const SizedBox(height: 16),
+            if (event!.description.isNotEmpty) _buildDescription(),
+            if (event!.description.isNotEmpty) const SizedBox(height: 16),
+            _buildLocation(),
+            const SizedBox(height: 16),
+            if (event!.activities.isNotEmpty) _buildActivities(),
+            if (event!.activities.isNotEmpty) const SizedBox(height: 16),
+            if (event!.schedules != null && event!.schedules!.isNotEmpty)
+              _buildSchedules(),
+            if (event!.schedules != null && event!.schedules!.isNotEmpty)
+              const SizedBox(height: 24),
+            _buildActionButton(request),
+            const SizedBox(height: 100),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildAppBar() {
-    final request = context.read<CookieRequest>();
-
-    return SliverAppBar(
-      expandedHeight: 300,
-      pinned: true,
-      backgroundColor: const Color(0xFF84CC16),
-      foregroundColor: Colors.white,
-      flexibleSpace: FlexibleSpaceBar(
-        background: event!.photoUrl.isNotEmpty
-            ? Image.network(
-                event!.photoUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildPlaceholder(),
-              )
-            : _buildPlaceholder(),
+  PreferredSizeWidget _buildTopAppBar(CookieRequest request) {
+    return AppBar(
+      title: const Text(
+        'Event Detail',
+        style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
       ),
+      backgroundColor: const Color(0xFFF8FAFC),
+      elevation: 0,
+      foregroundColor: Colors.black87,
+      surfaceTintColor: const Color(0xFFF8FAFC),
+      centerTitle: false,
       actions: event!.isOrganizer
           ? [
               PopupMenuButton<String>(
@@ -301,12 +290,14 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       ),
                     );
                     if (result == true) fetchEventDetail();
-                  } else if (value == 'delete') {
+                    return;
+                  }
+                  if (value == 'delete') {
                     deleteEvent(request);
                   }
                 },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
                     value: 'edit',
                     child: Row(
                       children: [
@@ -316,7 +307,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
                     child: Row(
                       children: [
@@ -333,6 +324,23 @@ class _EventDetailPageState extends State<EventDetailPage> {
               ),
             ]
           : null,
+    );
+  }
+
+  Widget _buildHeroImage() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: event!.photoUrl.isNotEmpty
+            ? Image.network(
+                event!.photoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildPlaceholder(),
+              )
+            : _buildPlaceholder(),
+      ),
     );
   }
 

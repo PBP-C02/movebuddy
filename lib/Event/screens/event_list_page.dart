@@ -469,7 +469,6 @@ class _EventListPageState extends State<EventListPage> {
   }
 
   Future<void> _openEditEvent(EventEntry event, CookieRequest request) async {
-    // Prefer fresh detail but fallback to existing data
     EventEntry? detailed =
         await _fetchEventDetailForEdit(request, eventId: event.id) ?? event;
     if (!mounted) return;
@@ -523,9 +522,10 @@ class _EventListPageState extends State<EventListPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black87,
+        centerTitle: false,
         title: const Text(
           "Events",
-          style: TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
         ),
         actions: [
           IconButton(
@@ -598,7 +598,7 @@ class _EventListPageState extends State<EventListPage> {
             if (events.isEmpty) {
               children.addAll(const [
                 SizedBox(height: 80),
-                Center(child: Text("Tidak ada event ditemukan di PWS.")),
+                Center(child: Text("Tidak ada event ditemukan.")),
               ]);
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -805,14 +805,6 @@ class _EventListPageState extends State<EventListPage> {
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Butuh pendamping latihan? Lanjutkan ke halaman Coach untuk menemukan pelatih yang sesuai dengan sport dan kota pilihan.",
-              style: TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
           ],
         ),
       ),
