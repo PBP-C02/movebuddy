@@ -1,36 +1,38 @@
-# This is a basic workflow to help you get started with Actions
 name: Release
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push events but only for the main branch
   push:
     branches: [main]
 
-# Permissions needed for creating releases
 permissions:
   contents: write
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "Build and Release APK"
   releases:
     name: Build and Release APK
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4
 
+      # Ambil versi pubspec.yaml (pakai cara baru, bukan set-output yang deprecated)
       - name: Get version from pubspec.yaml
         id: version
-        run: echo "::set-output name=version::$(grep "version:" pubspec.yaml | cut -c10-)"
+        shell: bash
+        run: |
+          VER=$(grep "^version:" pubspec.yaml | awk '{print $2}')
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
 
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: "zulu"
           java-version: "17"
+
+      # Setup Android SDK tools (zipalign/apksigner ada di build-tools)
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -40,21 +42,56 @@ jobs:
       - name: Get packages
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --split-per-abi
+      # Build: buat universal APK + split ABI (biar emulator aman dan HP juga aman)
+      - name: Build APKs (universal + split per ABI)
+        run: |
+          flutter build apk --release
+          flutter build apk --release --split-per-abi
 
+      # Decode keystore (pastikan secrets benar)
       - name: Decode Keystore
         run: echo "${{ secrets.KEY_JKS }}" | base64 -d > release-keystore.jks
 
-      - name: Sign APKs
+      # Sign APK: zipalign dulu, baru apksigner. Ini standar Android.
+      - name: Zipalign + Sign APKs (apksigner) + Verify
+        shell: bash
         run: |
-          for apk in build/app/outputs/flutter-apk/*.apk; do
-            echo "Signing $apk..."
-            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-              -keystore release-keystore.jks \
-              -storepass "${{ secrets.KEY_PASSWORD }}" \
-              -keypass "${{ secrets.KEY_PASSWORD }}" \
-              "$apk" release
+          set -euo pipefail
+
+          APK_DIR="build/app/outputs/flutter-apk"
+          BUILD_TOOLS="$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -n 1)"
+
+          ZIPALIGN="$BUILD_TOOLS/zipalign"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+
+          echo "Using build-tools: $BUILD_TOOLS"
+          echo "APKs in: $APK_DIR"
+          ls -lah "$APK_DIR"/*.apk
+
+          for apk in "$APK_DIR"/*.apk; do
+            echo "Processing: $apk"
+
+            aligned="${apk%.apk}-aligned.apk"
+            signed="${apk%.apk}-signed.apk"
+
+            # 1) zipalign
+            "$ZIPALIGN" -p 4 "$apk" "$aligned"
+
+            # 2) apksigner (v2/v3)
+            "$APKSIGNER" sign \
+              --ks release-keystore.jks \
+              --ks-key-alias release \
+              --ks-pass pass:"${{ secrets.KEY_PASSWORD }}" \
+              --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
+              --out "$signed" \
+              "$aligned"
+
+            # 3) verify
+            "$APKSIGNER" verify --verbose "$signed"
+
+            # replace original with signed
+            mv -f "$signed" "$apk"
+            rm -f "$aligned"
           done
 
       - name: Cleanup Keystore
@@ -63,11 +100,17 @@ jobs:
 
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(TZ='Asia/Jakarta' date +'%A %d-%m-%Y %T WIB')"
+        shell: bash
+        run: |
+          NOW=$(TZ='Asia/Jakarta' date +'%A %d-%m-%Y %T WIB')
+          echo "date=$NOW" >> "$GITHUB_OUTPUT"
 
       - name: Generate unique tag
         id: tag
-        run: echo "::set-output name=tag::v${{ steps.version.outputs.version }}-$(date +'%Y%m%d%H%M%S')"
+        shell: bash
+        run: |
+          TAG="v${{ steps.version.outputs.version }}-$(date +'%Y%m%d%H%M%S')"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Release APK
         uses: ncipollo/release-action@v1
