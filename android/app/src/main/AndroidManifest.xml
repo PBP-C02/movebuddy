@@ -42,5 +42,9 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+    </queries>
     <uses-permission android:name="android.permission.INTERNET"/>
 </manifest>
