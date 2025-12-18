@@ -4,7 +4,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:Movebuddy/Event/models/event_entry.dart';
 import 'package:Movebuddy/Event/utils/event_helpers.dart';
-import 'package:Movebuddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/event_config.dart';
 
 class EditEventForm extends StatefulWidget {
   final EventEntry event;
@@ -295,7 +295,7 @@ class _EditEventFormState extends State<EditEventForm> {
 
                       try {
                         final response = await request.postJson(
-                          "$baseUrl/event/json/${widget.event.id}/edit/",
+                          EventConfig.resolve('/event/json/${widget.event.id}/edit/'),
                           jsonEncode({
                             'name': _name,
                             'sport_type': _sportType,

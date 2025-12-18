@@ -3,7 +3,7 @@ import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:Movebuddy/Event/utils/event_helpers.dart';
 import 'package:Movebuddy/Event/screens/event_detail_page.dart';
-import 'package:Movebuddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/event_config.dart';
 
 class MyBookingsPage extends StatefulWidget {
   const MyBookingsPage({super.key});
@@ -14,8 +14,10 @@ class MyBookingsPage extends StatefulWidget {
 
 class _MyBookingsPageState extends State<MyBookingsPage> {
   Future<List<dynamic>> fetchBookings(CookieRequest request) async {
-    final response = await request.get('$baseUrl/event/json/my-bookings/');
-    return response;
+    final response = await request.get(
+      EventConfig.resolve('/event/json/my-bookings/'),
+    );
+    return response is List ? response : <dynamic>[];
   }
 
   @override

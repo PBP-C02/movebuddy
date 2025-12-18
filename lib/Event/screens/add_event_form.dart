@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:Movebuddy/Event/utils/event_helpers.dart';
-import 'package:Movebuddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/event_config.dart';
 import 'package:Movebuddy/Event/models/event_entry.dart';
 
 class AddEventForm extends StatefulWidget {
@@ -629,8 +629,8 @@ class _AddEventFormState extends State<AddEventForm> {
     Map<String, dynamic> payload,
   ) async {
     final url = isEdit
-        ? "$baseUrl/event/json/${widget.initialEvent!.id}/edit/"
-        : "$baseUrl/event/json/create/";
+        ? EventConfig.resolve('/event/json/${widget.initialEvent!.id}/edit/')
+        : EventConfig.resolve('/event/json/create/');
 
     // Use CookieRequest so session cookies/CSRF stay in sync with login state
     return request.postJson(url, jsonEncode(payload));

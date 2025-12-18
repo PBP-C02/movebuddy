@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:Movebuddy/Event/models/event_entry.dart';
 import 'package:Movebuddy/Event/utils/event_helpers.dart';
 import 'package:Movebuddy/Event/screens/edit_event_form.dart';
-import 'package:Movebuddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/event_config.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailPage extends StatefulWidget {
@@ -30,7 +30,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     final request = context.read<CookieRequest>();
     try {
       final response = await request.get(
-        '$baseUrl/event/json/${widget.eventId}/',
+        EventConfig.resolve('/event/json/${widget.eventId}/'),
       );
       setState(() {
         event = EventEntry.fromJson(response);
@@ -65,7 +65,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     try {
       final response = await request.postJson(
-        '$baseUrl/event/json/${widget.eventId}/join/',
+        EventConfig.resolve('/event/json/${widget.eventId}/join/'),
         '{"schedule_id": "$selectedScheduleId"}',
       );
 
@@ -109,7 +109,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     try {
       final response = await request.post(
-        '$baseUrl/event/json/${widget.eventId}/cancel/',
+        EventConfig.resolve('/event/json/${widget.eventId}/cancel/'),
         {},
       );
 
@@ -153,7 +153,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     try {
       final response = await request.postJson(
-        '$baseUrl/event/json/${widget.eventId}/toggle-availability/',
+        EventConfig.resolve('/event/json/${widget.eventId}/toggle-availability/'),
         '{"is_available": $newAvailability}',
       );
 
@@ -197,7 +197,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
     try {
       final response = await request.post(
-        '$baseUrl/event/json/${widget.eventId}/delete/',
+        EventConfig.resolve('/event/json/${widget.eventId}/delete/'),
         {},
       );
 

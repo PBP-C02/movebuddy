@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:Movebuddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/event_config.dart';
 
 List<EventEntry> eventEntryFromJson(String str) =>
     List<EventEntry>.from(json.decode(str).map((x) => EventEntry.fromJson(x)));
@@ -58,7 +58,7 @@ class EventEntry {
         (rawPhotoUrl.startsWith("http") || rawPhotoUrl.startsWith("data:"))
         ? rawPhotoUrl
         : rawPhotoUrl.isNotEmpty
-        ? "$baseUrl$rawPhotoUrl"
+        ? EventConfig.resolve(rawPhotoUrl)
         : "";
 
     return EventEntry(
