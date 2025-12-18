@@ -1,6 +1,6 @@
 {
-    "name": "move_buddy",
-    "short_name": "move_buddy",
+    "name": "Movebuddy",
+    "short_name": "Movebuddy",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

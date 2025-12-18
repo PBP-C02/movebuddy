@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Event/models/event_entry.dart';
-import 'package:move_buddy/Event/utils/event_helpers.dart';
-import 'package:move_buddy/Event/screens/edit_event_form.dart';
-import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/models/event_entry.dart';
+import 'package:Movebuddy/Event/utils/event_helpers.dart';
+import 'package:Movebuddy/Event/screens/edit_event_form.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailPage extends StatefulWidget {
@@ -29,7 +29,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
   Future<void> fetchEventDetail() async {
     final request = context.read<CookieRequest>();
     try {
-      final response = await request.get('$baseUrl/event/json/${widget.eventId}/');
+      final response = await request.get(
+        '$baseUrl/event/json/${widget.eventId}/',
+      );
       setState(() {
         event = EventEntry.fromJson(response);
         selectedScheduleId = null; // clear old selection after refresh
@@ -38,9 +40,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
     } catch (e) {
       setState(() => isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -85,7 +87,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancel Registration'),
-        content: const Text('Are you sure you want to cancel all registrations for this event?'),
+        content: const Text(
+          'Are you sure you want to cancel all registrations for this event?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -104,7 +108,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
     if (confirm != true) return;
 
     try {
-      final response = await request.post('$baseUrl/event/json/${widget.eventId}/cancel/', {});
+      final response = await request.post(
+        '$baseUrl/event/json/${widget.eventId}/cancel/',
+        {},
+      );
 
       if (mounted) {
         if (response['success']) {
@@ -141,9 +148,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
   Future<void> toggleAvailability(CookieRequest request) async {
     if (event == null) return;
-    
+
     final bool newAvailability = event!.status != 'available';
-    
+
     try {
       final response = await request.postJson(
         '$baseUrl/event/json/${widget.eventId}/toggle-availability/',
@@ -168,7 +175,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Event'),
-        content: const Text('Are you sure you want to delete this event? This action cannot be undone.'),
+        content: const Text(
+          'Are you sure you want to delete this event? This action cannot be undone.',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -187,7 +196,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
     if (confirm != true) return;
 
     try {
-      final response = await request.post('$baseUrl/event/json/${widget.eventId}/delete/', {});
+      final response = await request.post(
+        '$baseUrl/event/json/${widget.eventId}/delete/',
+        {},
+      );
 
       if (mounted) {
         if (response['success']) {
@@ -209,7 +221,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8FAFC),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF84CC16))),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF84CC16)),
+        ),
       );
     }
 
@@ -241,8 +255,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
                   const SizedBox(height: 16),
                   if (event!.activities.isNotEmpty) _buildActivities(),
                   if (event!.activities.isNotEmpty) const SizedBox(height: 16),
-                  if (event!.schedules != null && event!.schedules!.isNotEmpty) _buildSchedules(),
-                  if (event!.schedules != null && event!.schedules!.isNotEmpty) const SizedBox(height: 24),
+                  if (event!.schedules != null && event!.schedules!.isNotEmpty)
+                    _buildSchedules(),
+                  if (event!.schedules != null && event!.schedules!.isNotEmpty)
+                    const SizedBox(height: 24),
                   _buildActionButton(request),
                   const SizedBox(height: 100),
                 ],
@@ -256,7 +272,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
 
   Widget _buildAppBar() {
     final request = context.read<CookieRequest>();
-    
+
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
@@ -264,50 +280,59 @@ class _EventDetailPageState extends State<EventDetailPage> {
       foregroundColor: Colors.white,
       flexibleSpace: FlexibleSpaceBar(
         background: event!.photoUrl.isNotEmpty
-            ? Image.network(event!.photoUrl, fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildPlaceholder())
+            ? Image.network(
+                event!.photoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildPlaceholder(),
+              )
             : _buildPlaceholder(),
       ),
-      actions: event!.isOrganizer ? [
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (value) async {
-            if (value == 'edit') {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditEventForm(event: event!),
-                ),
-              );
-              if (result == true) fetchEventDetail();
-            } else if (value == 'delete') {
-              deleteEvent(request);
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, color: Color(0xFF64748B)),
-                  SizedBox(width: 12),
-                  Text('Edit Event'),
+      actions: event!.isOrganizer
+          ? [
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditEventForm(event: event!),
+                      ),
+                    );
+                    if (result == true) fetchEventDetail();
+                  } else if (value == 'delete') {
+                    deleteEvent(request);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, color: Color(0xFF64748B)),
+                        SizedBox(width: 12),
+                        Text('Edit Event'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, color: Colors.red),
+                        SizedBox(width: 12),
+                        Text(
+                          'Delete Event',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Delete Event', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ] : null,
+            ]
+          : null,
     );
   }
 
@@ -315,7 +340,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
     return Container(
       color: const Color(0xFFF1F5F9),
       child: Center(
-        child: Text(EventHelpers.getSportIcon(event!.sportType), style: const TextStyle(fontSize: 80)),
+        child: Text(
+          EventHelpers.getSportIcon(event!.sportType),
+          style: const TextStyle(fontSize: 80),
+        ),
       ),
     );
   }
@@ -339,7 +367,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
         children: [
           Row(
             children: [
-              Text(EventHelpers.getSportIcon(event!.sportType), style: const TextStyle(fontSize: 32)),
+              Text(
+                EventHelpers.getSportIcon(event!.sportType),
+                style: const TextStyle(fontSize: 32),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -364,18 +395,27 @@ class _EventDetailPageState extends State<EventDetailPage> {
               ),
               _buildBadge(
                 event!.status == 'available' ? 'AVAILABLE' : 'FULL',
-                event!.status == 'available' ? const Color(0xFF10B981) : Colors.red,
+                event!.status == 'available'
+                    ? const Color(0xFF10B981)
+                    : Colors.red,
               ),
             ],
           ),
           const SizedBox(height: 16),
           _buildInfoRow(Icons.location_on, event!.city),
           const SizedBox(height: 8),
-          _buildInfoRow(Icons.star, '${EventHelpers.formatRating(double.parse(event!.rating))} / 5.0'),
+          _buildInfoRow(
+            Icons.star,
+            '${EventHelpers.formatRating(double.parse(event!.rating))} / 5.0',
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.attach_money, color: Color(0xFF84CC16), size: 24),
+              const Icon(
+                Icons.attach_money,
+                color: Color(0xFF84CC16),
+                size: 24,
+              ),
               const SizedBox(width: 8),
               Text(
                 EventHelpers.formatPrice(double.parse(event!.entryPrice)),
@@ -387,10 +427,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
               ),
               const Text(
                 ' entry fee',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF64748B),
-                ),
+                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
               ),
             ],
           ),
@@ -442,7 +479,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
     return _buildCard(
       'Description',
       Icons.description,
-      Text(event!.description, style: const TextStyle(fontSize: 15, height: 1.5)),
+      Text(
+        event!.description,
+        style: const TextStyle(fontSize: 15, height: 1.5),
+      ),
     );
   }
 
@@ -453,7 +493,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(event!.fullAddress, style: const TextStyle(fontSize: 15, height: 1.5)),
+          Text(
+            event!.fullAddress,
+            style: const TextStyle(fontSize: 15, height: 1.5),
+          ),
           if (event!.googleMapsLink.isNotEmpty) ...[
             const SizedBox(height: 12),
             ElevatedButton.icon(
@@ -463,7 +506,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF84CC16),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -473,7 +518,11 @@ class _EventDetailPageState extends State<EventDetailPage> {
   }
 
   Widget _buildActivities() {
-    final activities = event!.activities.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final activities = event!.activities
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     return _buildCard(
       'Activities & Facilities',
       Icons.sports_basketball,
@@ -484,7 +533,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
           return Chip(
             label: Text(activity),
             backgroundColor: const Color(0xFFF1F5F9),
-            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            labelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           );
         }).toList(),
       ),
@@ -494,9 +546,13 @@ class _EventDetailPageState extends State<EventDetailPage> {
   Widget _buildMetaOverview() {
     final isAvailable = event!.status.toLowerCase() == 'available';
     final statusLabel = isAvailable ? 'Available' : 'Unavailable';
-    final ratingValue = EventHelpers.formatRating(double.tryParse(event!.rating) ?? 0);
+    final ratingValue = EventHelpers.formatRating(
+      double.tryParse(event!.rating) ?? 0,
+    );
     final createdDate = EventHelpers.formatDateShort(event!.createdAt);
-    final categoryLabel = event!.category.isNotEmpty ? event!.category : 'Uncategorized';
+    final categoryLabel = event!.category.isNotEmpty
+        ? event!.category
+        : 'Uncategorized';
 
     return _buildCard(
       'Event Snapshot',
@@ -579,7 +635,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 child: _buildMetaTile(
                   icon: Icons.payments_outlined,
                   label: 'Entry Fee',
-                  value: EventHelpers.formatPrice(double.tryParse(event!.entryPrice) ?? 0),
+                  value: EventHelpers.formatPrice(
+                    double.tryParse(event!.entryPrice) ?? 0,
+                  ),
                   accent: const Color(0xFF84CC16),
                 ),
               ),
@@ -600,13 +658,16 @@ class _EventDetailPageState extends State<EventDetailPage> {
       Column(
         children: event!.schedules!.map((schedule) {
           final isSelected = selectedScheduleId == schedule.id;
-          final isRegistered = event!.userSchedules?.contains(schedule.id) ?? false;
+          final isRegistered =
+              event!.userSchedules?.contains(schedule.id) ?? false;
           final canSelect = !isOrganizer && isEventAvailable && !isRegistered;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             child: InkWell(
-              onTap: canSelect ? () => setState(() => selectedScheduleId = schedule.id) : null,
+              onTap: canSelect
+                  ? () => setState(() => selectedScheduleId = schedule.id)
+                  : null,
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 padding: const EdgeInsets.all(16),
@@ -614,19 +675,19 @@ class _EventDetailPageState extends State<EventDetailPage> {
                   color: isOrganizer
                       ? const Color(0xFFF1F5F9)
                       : isRegistered
-                          ? const Color(0xFF10B981).withOpacity(0.1)
-                          : isSelected
-                              ? const Color(0xFF84CC16).withOpacity(0.1)
-                          : const Color(0xFFF8FAFC),
+                      ? const Color(0xFF10B981).withOpacity(0.1)
+                      : isSelected
+                      ? const Color(0xFF84CC16).withOpacity(0.1)
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isOrganizer
                         ? const Color(0xFFE2E8F0)
                         : isRegistered
-                            ? const Color(0xFF10B981)
-                            : isSelected
-                                ? const Color(0xFF84CC16)
-                                : const Color(0xFFE2E8F0),
+                        ? const Color(0xFF10B981)
+                        : isSelected
+                        ? const Color(0xFF84CC16)
+                        : const Color(0xFFE2E8F0),
                     width: 2,
                   ),
                 ),
@@ -636,13 +697,13 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       isRegistered
                           ? Icons.check_circle
                           : isSelected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
                       color: isRegistered
                           ? const Color(0xFF10B981)
                           : isSelected
-                              ? const Color(0xFF84CC16)
-                              : const Color(0xFF94A3B8),
+                          ? const Color(0xFF84CC16)
+                          : const Color(0xFF94A3B8),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -691,8 +752,10 @@ class _EventDetailPageState extends State<EventDetailPage> {
   Widget _buildActionButton(CookieRequest request) {
     final isOrganizer = event!.isOrganizer;
     final isEventAvailable = event!.status.toLowerCase() == 'available';
-    final hasSchedules = event!.schedules != null && event!.schedules!.isNotEmpty;
-    final hasRegistration = event!.userSchedules != null && event!.userSchedules!.isNotEmpty;
+    final hasSchedules =
+        event!.schedules != null && event!.schedules!.isNotEmpty;
+    final hasRegistration =
+        event!.userSchedules != null && event!.userSchedules!.isNotEmpty;
 
     if (isOrganizer) {
       return Column(
@@ -710,15 +773,23 @@ class _EventDetailPageState extends State<EventDetailPage> {
             height: 52,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: isEventAvailable ? Colors.red : const Color(0xFF10B981),
+                backgroundColor: isEventAvailable
+                    ? Colors.red
+                    : const Color(0xFF10B981),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 0,
               ),
               onPressed: () => toggleAvailability(request),
               child: Text(
                 isEventAvailable ? 'MARK UNAVAILABLE' : 'MARK AVAILABLE',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
               ),
             ),
           ),
@@ -729,7 +800,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF0F172A),
                 side: const BorderSide(color: Color(0xFFE2E8F0)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               onPressed: () async {
                 final result = await Navigator.push(
@@ -755,11 +828,20 @@ class _EventDetailPageState extends State<EventDetailPage> {
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 0,
           ),
           onPressed: () => cancelEvent(request),
-          child: const Text('CANCEL REGISTRATION', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          child: const Text(
+            'CANCEL REGISTRATION',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
         ),
       );
     }
@@ -772,11 +854,20 @@ class _EventDetailPageState extends State<EventDetailPage> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFE2E8F0),
             foregroundColor: const Color(0xFF94A3B8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 0,
           ),
           onPressed: null,
-          child: const Text('EVENT UNAVAILABLE', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 1)),
+          child: const Text(
+            'EVENT UNAVAILABLE',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+            ),
+          ),
         ),
       );
     }
@@ -789,11 +880,20 @@ class _EventDetailPageState extends State<EventDetailPage> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF84CC16),
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 0,
           ),
           onPressed: () => joinEvent(request),
-          child: const Text('JOIN EVENT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          child: const Text(
+            'JOIN EVENT',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
         ),
       );
     }
@@ -846,7 +946,8 @@ class _EventDetailPageState extends State<EventDetailPage> {
     Color? accent,
   }) {
     final Color iconColor = accent ?? const Color(0xFF0F172A);
-    final Color borderColor = accent?.withOpacity(0.4) ?? const Color(0xFFE2E8F0);
+    final Color borderColor =
+        accent?.withOpacity(0.4) ?? const Color(0xFFE2E8F0);
 
     return Container(
       padding: const EdgeInsets.all(12),

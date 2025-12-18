@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Coach/models/coach_entry.dart';
-import 'package:move_buddy/Coach/widgets/coach_entry_card.dart';
-import 'package:move_buddy/Coach/screens/coach_create_page.dart';
-import 'package:move_buddy/Coach/screens/coach_detail_page.dart';
+import 'package:Movebuddy/Coach/models/coach_entry.dart';
+import 'package:Movebuddy/Coach/widgets/coach_entry_card.dart';
+import 'package:Movebuddy/Coach/screens/coach_create_page.dart';
+import 'package:Movebuddy/Coach/screens/coach_detail_page.dart';
 
 class CoachEntryListPage extends StatefulWidget {
   const CoachEntryListPage({super.key});
@@ -173,10 +173,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
     final updated = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => CoachDetailPage(
-          coach: coach,
-          canEdit: coach.isOwner,
-        ),
+        builder: (_) => CoachDetailPage(coach: coach, canEdit: coach.isOwner),
       ),
     );
     if (updated == true) {
@@ -221,12 +218,13 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
         String? errorText;
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-
             InputDecoration _priceDecoration(
               String label, {
               bool highlightError = false,
             }) {
-              final borderColor = highlightError ? Colors.red : Colors.grey.shade400;
+              final borderColor = highlightError
+                  ? Colors.red
+                  : Colors.grey.shade400;
               return InputDecoration(
                 labelText: label,
                 prefixText: 'Rp ',
@@ -241,7 +239,9 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: highlightError ? Colors.red : const Color(0xFF182435),
+                    color: highlightError
+                        ? Colors.red
+                        : const Color(0xFF182435),
                     width: 1.5,
                   ),
                 ),
@@ -257,10 +257,13 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
             }
 
             return Dialog(
-              insetPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 40,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Column(
@@ -272,8 +275,10 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                       children: [
                         const Text(
                           'Filter Harga',
-                          style:
-                              TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         IconButton(
                           onPressed: () => Navigator.of(dialogCtx).pop(),
@@ -334,14 +339,20 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                         const Spacer(),
                         ElevatedButton(
                           onPressed: () {
-                            final minVal = int.tryParse(
-                                  _minPriceController.text
-                                      .replaceAll(RegExp(r'[^0-9]'), ''),
+                            final minVal =
+                                int.tryParse(
+                                  _minPriceController.text.replaceAll(
+                                    RegExp(r'[^0-9]'),
+                                    '',
+                                  ),
                                 ) ??
                                 0;
-                            final maxVal = int.tryParse(
-                                  _maxPriceController.text
-                                      .replaceAll(RegExp(r'[^0-9]'), ''),
+                            final maxVal =
+                                int.tryParse(
+                                  _maxPriceController.text.replaceAll(
+                                    RegExp(r'[^0-9]'),
+                                    '',
+                                  ),
                                 ) ??
                                 0;
 
@@ -405,16 +416,16 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
     );
 
     BoxDecoration _cardDecoration() => BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        );
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.06),
+          blurRadius: 18,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -448,8 +459,10 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 0,
+                    ),
                   ),
                   onChanged: (value) {
                     setState(() => _searchQuery = value.trim());
@@ -461,8 +474,9 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value:
-                            _selectedLocation.isEmpty ? '' : _selectedLocation,
+                        value: _selectedLocation.isEmpty
+                            ? ''
+                            : _selectedLocation,
                         items: [
                           for (final loc in _locationOptions)
                             DropdownMenuItem(
@@ -510,10 +524,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Kategori Olahraga',
-                      style: sectionLabelStyle,
-                    ),
+                    const Text('Kategori Olahraga', style: sectionLabelStyle),
                     Row(
                       children: const [
                         Icon(Icons.swap_horiz, size: 16, color: Colors.grey),
@@ -555,7 +566,7 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                 Row(
                   children: [
                     Expanded(
-                  child: _SegmentButton(
+                      child: _SegmentButton(
                         label: 'All Classes',
                         selected: _viewMode == 'all',
                         onTap: () => _toggleViewMode('all'),
@@ -792,10 +803,16 @@ class _CoachEntryListPageState extends State<CoachEntryListPage> {
                 children: [
                   _buildFilterBar(),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 32),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 32,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
@@ -873,10 +890,10 @@ class _FilterChipOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background =
-        selected ? const Color(0xFFB7DC81) : Colors.grey.shade50;
-    final borderColor =
-        selected ? const Color(0xFFB7DC81) : Colors.grey.shade400;
+    final background = selected ? const Color(0xFFB7DC81) : Colors.grey.shade50;
+    final borderColor = selected
+        ? const Color(0xFFB7DC81)
+        : Colors.grey.shade400;
     final textColor = selected ? const Color(0xFF182435) : Colors.grey.shade900;
 
     return InkWell(
@@ -898,10 +915,7 @@ class _FilterChipOption extends StatelessWidget {
             ],
             Text(
               label,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -925,8 +939,9 @@ class _SegmentButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = selected ? const Color(0xFFB7DC81) : Colors.white;
     final border = selected ? const Color(0xFFB7DC81) : Colors.grey.shade300;
-    final textColor =
-        selected ? const Color(0xFF182435) : const Color(0xFF3A4A5A);
+    final textColor = selected
+        ? const Color(0xFF182435)
+        : const Color(0xFF3A4A5A);
 
     return InkWell(
       onTap: onTap,
@@ -940,10 +955,7 @@ class _SegmentButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: textColor,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
         ),
       ),
     );

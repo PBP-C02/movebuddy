@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 
-import 'package:move_buddy/Coach/models/coach_entry.dart';
+import 'package:Movebuddy/Coach/models/coach_entry.dart';
 
 class CoachUpdatePage extends StatefulWidget {
   final Coach coach;
@@ -102,8 +102,8 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     _descriptionController.text = coach.description;
     _selectedCategory =
         _categories.map((cat) => cat['value']).contains(coach.category)
-            ? coach.category
-            : 'badminton';
+        ? coach.category
+        : 'badminton';
     _locationController.text = coach.location;
     _addressController.text = coach.address;
     _priceController.text = coach.price.toString();
@@ -131,6 +131,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
+
   String _normalizeUrl(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return '';
@@ -168,8 +169,9 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     final initial = _selectedDate ?? now;
     final firstDate = initial.isBefore(now) ? initial : now;
     final lastDateCandidate = DateTime(now.year + 2);
-    final lastDate =
-        initial.isAfter(lastDateCandidate) ? initial : lastDateCandidate;
+    final lastDate = initial.isAfter(lastDateCandidate)
+        ? initial
+        : lastDateCandidate;
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -220,20 +222,16 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
     final mapsLink = _normalizeUrl(_mapsController.text);
     if (mapsLink.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Link Google Maps wajib diisi.'),
-        ),
+        const SnackBar(content: Text('Link Google Maps wajib diisi.')),
       );
       return;
     }
 
     final ratingValue = double.tryParse(_ratingController.text.trim());
     if (ratingValue == null || ratingValue < 0 || ratingValue > 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rating harus angka 0-5.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Rating harus angka 0-5.')));
       return;
     }
 
@@ -285,14 +283,14 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Coach berhasil diperbarui.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Coach berhasil diperbarui.')),
+        );
         Navigator.pop(context, true);
       } else {
         final message =
             (response is Map ? response['message'] : null) ??
-                'Gagal memperbarui coach, coba lagi.';
+            'Gagal memperbarui coach, coba lagi.';
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
@@ -322,17 +320,17 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
         ? currentLocation
         : '';
 
-    final categoryValue = _categories.any(
-      (cat) => cat['value'] == _selectedCategory,
-    )
+    final categoryValue =
+        _categories.any((cat) => cat['value'] == _selectedCategory)
         ? _selectedCategory
         : (_categories.isNotEmpty ? _categories.first['value']! : null);
 
     final dateLabel = _selectedDate == null
         ? 'Pilih tanggal'
         : DateFormat('dd MMM yyyy').format(_selectedDate!);
-    final startLabel =
-        _startTime == null ? 'Jam mulai' : _formatTime(_startTime!);
+    final startLabel = _startTime == null
+        ? 'Jam mulai'
+        : _formatTime(_startTime!);
     final endLabel = _endTime == null ? 'Jam selesai' : _formatTime(_endTime!);
 
     return Scaffold(
@@ -350,331 +348,334 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Perbarui informasi coach',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSectionTitle('Informasi Coach'),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: _filledDecoration('Judul'),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    decoration: _filledDecoration('Deskripsi'),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: categoryValue,
+                    decoration: _filledDecoration('Kategori'),
+                    items: _categories
+                        .map(
+                          (cat) => DropdownMenuItem(
+                            value: cat['value'],
+                            child: Text(cat['label']!),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedCategory = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  _buildSectionTitle('Lokasi'),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: dropdownLocationValue,
+                    decoration: _filledDecoration('Kota'),
+                    items: locationItems
+                        .map(
+                          (loc) => DropdownMenuItem(
+                            value: loc,
+                            child: Text(loc.isEmpty ? 'Pilih lokasi' : loc),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => _locationController.text = value ?? '');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _addressController,
+                    decoration: _filledDecoration('Alamat lengkap'),
+                    maxLines: 2,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _mapsController,
+                    decoration: _filledDecoration(
+                      'Link Google Maps',
+                      hint: 'https://maps.google.com/...',
+                    ),
+                    keyboardType: TextInputType.url,
+                  ),
+                  const SizedBox(height: 18),
+                  _buildSectionTitle('Jadwal & Harga'),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _priceController,
+                    decoration: _filledDecoration(
+                      'Harga per sesi',
+                      prefix: 'Rp ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Wajib diisi';
+                      return int.tryParse(
+                                v.replaceAll('.', '').replaceAll(',', ''),
+                              ) ==
+                              null
+                          ? 'Masukkan angka'
+                          : null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
                     children: [
-                      const Text(
-                        'Perbarui informasi coach',
-                        style:
-                            TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildSectionTitle('Informasi Coach'),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: _filledDecoration('Judul'),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _descriptionController,
-                        maxLines: 3,
-                        decoration: _filledDecoration('Deskripsi'),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: categoryValue,
-                        decoration: _filledDecoration('Kategori'),
-                        items: _categories
-                            .map(
-                              (cat) => DropdownMenuItem(
-                                value: cat['value'],
-                                child: Text(cat['label']!),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _selectedCategory = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 18),
-                      _buildSectionTitle('Lokasi'),
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        value: dropdownLocationValue,
-                        decoration: _filledDecoration('Kota'),
-                        items: locationItems
-                            .map(
-                              (loc) => DropdownMenuItem(
-                                value: loc,
-                                child: Text(loc.isEmpty ? 'Pilih lokasi' : loc),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() => _locationController.text = value ?? '');
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: _filledDecoration('Alamat lengkap'),
-                        maxLines: 2,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _mapsController,
-                        decoration: _filledDecoration(
-                          'Link Google Maps',
-                          hint: 'https://maps.google.com/...',
-                        ),
-                        keyboardType: TextInputType.url,
-                      ),
-                      const SizedBox(height: 18),
-                      _buildSectionTitle('Jadwal & Harga'),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _priceController,
-                        decoration: _filledDecoration(
-                          'Harga per sesi',
-                          prefix: 'Rp ',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                          return int.tryParse(
-                                    v.replaceAll('.', '').replaceAll(',', ''),
-                                  ) ==
-                                  null
-                              ? 'Masukkan angka'
-                              : null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _selectDate,
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF7F8FA),
-                                foregroundColor: Colors.black87,
-                                side: BorderSide(color: Colors.grey.shade300),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              icon: const Icon(Icons.calendar_today),
-                              label: Text(dateLabel),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _selectTime(isStart: true),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF7F8FA),
-                                foregroundColor: Colors.black87,
-                                side: BorderSide(color: Colors.grey.shade300),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              icon: const Icon(Icons.access_time),
-                              label: Text(startLabel),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _selectTime(isStart: false),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF7F8FA),
-                                foregroundColor: Colors.black87,
-                                side: BorderSide(color: Colors.grey.shade300),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              icon: const Icon(Icons.access_time_filled),
-                              label: Text(endLabel),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      _buildSectionTitle('Rating & Kontak'),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _ratingController,
-                        decoration: _filledDecoration(
-                          'Rating (0-5)',
-                          hint: 'contoh: 4.5',
-                        ),
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                          final parsed = double.tryParse(v.trim());
-                          if (parsed == null || parsed < 0 || parsed > 5) {
-                            return 'Masukkan angka 0-5';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _instagramController,
-                        decoration: _filledDecoration(
-                          'Instagram (opsional)',
-                          hint: 'https://instagram.com/username',
-                        ),
-                        keyboardType: TextInputType.url,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionTitle('Foto Coach'),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
+                      Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _pickImage,
+                          onPressed: _selectDate,
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            backgroundColor: const Color(0xFFF7F8FA),
+                            foregroundColor: Colors.black87,
                             side: BorderSide(color: Colors.grey.shade300),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(Icons.image_outlined, size: 22),
-                          label: Text(
-                            _pickedImage == null && _existingImageUrl == null
-                                ? 'Pilih gambar (opsional)'
-                                : 'Ganti gambar',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          height: 220,
-                          width: double.infinity,
-                          color: const Color(0xFFF5F5F5),
-                          child: _pickedImage != null
-                              ? (kIsWeb && _imageBytes != null
-                                  ? Image.memory(
-                                      _imageBytes!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    )
-                                  : Image.file(
-                                      File(_pickedImage!.path),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    ))
-                              : (_existingImageUrl != null
-                                  ? Image.network(
-                                      _existingImageUrl!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                        color: Colors.grey.shade200,
-                                        alignment: Alignment.center,
-                                        child: const Icon(
-                                          Icons.broken_image,
-                                          size: 48,
-                                        ),
-                                      ),
-                                    )
-                                  : Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: const [
-                                        Icon(Icons.image_outlined,
-                                            size: 42, color: Colors.grey),
-                                        SizedBox(height: 8),
-                                        Text(
-                                          'Belum ada gambar',
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    )),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          onPressed: _isSubmitting ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFB7DC81),
-                            foregroundColor: const Color(0xFF182435),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Color(0xFF182435),
-                                  ),
-                                )
-                              : const Text(
-                                  'Perbarui Coach',
-                                  style: TextStyle(fontWeight: FontWeight.w800),
-                                ),
+                          icon: const Icon(Icons.calendar_today),
+                          label: Text(dateLabel),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _selectTime(isStart: true),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF7F8FA),
+                            foregroundColor: Colors.black87,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.access_time),
+                          label: Text(startLabel),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _selectTime(isStart: false),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF7F8FA),
+                            foregroundColor: Colors.black87,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.access_time_filled),
+                          label: Text(endLabel),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _buildSectionTitle('Rating & Kontak'),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _ratingController,
+                    decoration: _filledDecoration(
+                      'Rating (0-5)',
+                      hint: 'contoh: 4.5',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Wajib diisi';
+                      final parsed = double.tryParse(v.trim());
+                      if (parsed == null || parsed < 0 || parsed > 5) {
+                        return 'Masukkan angka 0-5';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _instagramController,
+                    decoration: _filledDecoration(
+                      'Instagram (opsional)',
+                      hint: 'https://instagram.com/username',
+                    ),
+                    keyboardType: TextInputType.url,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSectionTitle('Foto Coach'),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: _pickImage,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.image_outlined, size: 22),
+                      label: Text(
+                        _pickedImage == null && _existingImageUrl == null
+                            ? 'Pilih gambar (opsional)'
+                            : 'Ganti gambar',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      height: 220,
+                      width: double.infinity,
+                      color: const Color(0xFFF5F5F5),
+                      child: _pickedImage != null
+                          ? (kIsWeb && _imageBytes != null
+                                ? Image.memory(
+                                    _imageBytes!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  )
+                                : Image.file(
+                                    File(_pickedImage!.path),
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ))
+                          : (_existingImageUrl != null
+                                ? Image.network(
+                                    _existingImageUrl!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                              color: Colors.grey.shade200,
+                                              alignment: Alignment.center,
+                                              child: const Icon(
+                                                Icons.broken_image,
+                                                size: 48,
+                                              ),
+                                            ),
+                                  )
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(
+                                        Icons.image_outlined,
+                                        size: 42,
+                                        color: Colors.grey,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Belum ada gambar',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  )),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB7DC81),
+                        foregroundColor: const Color(0xFF182435),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Color(0xFF182435),
+                              ),
+                            )
+                          : const Text(
+                              'Perbarui Coach',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        fontWeight: FontWeight.w800,
-        fontSize: 14,
-      ),
+      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
     );
   }
 
-  InputDecoration _filledDecoration(String label,
-      {String? hint, String? prefix}) {
+  InputDecoration _filledDecoration(
+    String label, {
+    String? hint,
+    String? prefix,
+  }) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
@@ -685,10 +686,7 @@ class _CoachUpdatePageState extends State<CoachUpdatePage> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 16,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
     );
   }
 }

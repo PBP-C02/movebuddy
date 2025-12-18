@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Event/models/event_entry.dart';
-import 'package:move_buddy/Event/utils/event_helpers.dart';
-import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/models/event_entry.dart';
+import 'package:Movebuddy/Event/utils/event_helpers.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
 
 class EditEventForm extends StatefulWidget {
   final EventEntry event;
-  
+
   const EditEventForm({super.key, required this.event});
 
   @override
@@ -35,7 +35,7 @@ class _EditEventFormState extends State<EditEventForm> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize with existing event data
     _name = widget.event.name;
     _sportType = widget.event.sportType;
@@ -48,7 +48,7 @@ class _EditEventFormState extends State<EditEventForm> {
     _googleMapsLink = widget.event.googleMapsLink;
     _category = widget.event.category;
     _status = widget.event.status;
-    
+
     // Initialize selected dates from event schedules
     if (widget.event.schedules != null) {
       selectedDates = widget.event.schedules!.map((s) => s.date).toList();
@@ -118,7 +118,8 @@ class _EditEventFormState extends State<EditEventForm> {
                       hint: 'e.g., Weekend Soccer Match',
                       initialValue: _name,
                       onChanged: (value) => setState(() => _name = value),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
                     ),
                     const SizedBox(height: 16),
                     _buildDropdown(
@@ -129,7 +130,10 @@ class _EditEventFormState extends State<EditEventForm> {
                           value: sport['value'],
                           child: Row(
                             children: [
-                              Text(EventHelpers.getSportIcon(sport['value']!), style: const TextStyle(fontSize: 20)),
+                              Text(
+                                EventHelpers.getSportIcon(sport['value']!),
+                                style: const TextStyle(fontSize: 20),
+                              ),
                               const SizedBox(width: 8),
                               Text(sport['label']!),
                             ],
@@ -144,7 +148,8 @@ class _EditEventFormState extends State<EditEventForm> {
                       hint: 'Tell us about your event...',
                       initialValue: _description,
                       maxLines: 3,
-                      onChanged: (value) => setState(() => _description = value),
+                      onChanged: (value) =>
+                          setState(() => _description = value),
                     ),
                   ],
                 ),
@@ -169,15 +174,18 @@ class _EditEventFormState extends State<EditEventForm> {
                       hint: 'Complete address with details',
                       initialValue: _fullAddress,
                       maxLines: 2,
-                      onChanged: (value) => setState(() => _fullAddress = value),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                      onChanged: (value) =>
+                          setState(() => _fullAddress = value),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
                       label: 'Google Maps Link (optional)',
                       hint: 'https://maps.google.com/...',
                       initialValue: _googleMapsLink,
-                      onChanged: (value) => setState(() => _googleMapsLink = value),
+                      onChanged: (value) =>
+                          setState(() => _googleMapsLink = value),
                     ),
                   ],
                 ),
@@ -194,7 +202,8 @@ class _EditEventFormState extends State<EditEventForm> {
                       initialValue: _entryPrice,
                       keyboardType: TextInputType.number,
                       onChanged: (value) => setState(() => _entryPrice = value),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
@@ -227,7 +236,9 @@ class _EditEventFormState extends State<EditEventForm> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF84CC16),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: selectDates,
                     ),
@@ -259,7 +270,9 @@ class _EditEventFormState extends State<EditEventForm> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF84CC16),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     elevation: 0,
                   ),
                   onPressed: () async {
@@ -269,7 +282,10 @@ class _EditEventFormState extends State<EditEventForm> {
                         return;
                       }
                       if (selectedDates.isEmpty) {
-                        _showSnackBar('Please add at least one date', isError: true);
+                        _showSnackBar(
+                          'Please add at least one date',
+                          isError: true,
+                        );
                         return;
                       }
 
@@ -301,7 +317,10 @@ class _EditEventFormState extends State<EditEventForm> {
                             _showSnackBar('Event updated successfully!');
                             Navigator.pop(context, true);
                           } else {
-                            _showSnackBar(response['message'] ?? 'Failed', isError: true);
+                            _showSnackBar(
+                              response['message'] ?? 'Failed',
+                              isError: true,
+                            );
                           }
                         }
                       } catch (e) {
@@ -313,7 +332,11 @@ class _EditEventFormState extends State<EditEventForm> {
                   },
                   child: const Text(
                     'UPDATE EVENT',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
               ),

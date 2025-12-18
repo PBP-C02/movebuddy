@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -25,8 +25,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   // Pilihan kategori sesuai models.py Django
   final List<String> _categories = [
-    'tennis', 'basketball', 'soccer', 'badminton', 'volleyball',
-    'paddle', 'futsal', 'table_tennis', 'jogging'
+    'tennis',
+    'basketball',
+    'soccer',
+    'badminton',
+    'volleyball',
+    'paddle',
+    'futsal',
+    'table_tennis',
+    'jogging',
   ];
 
   // Helper function untuk format jam (HH:MM) agar sesuai selera Django
@@ -58,11 +65,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 decoration: InputDecoration(
                   labelText: "Judul Aktivitas",
                   hintText: "Contoh: Main Futsal Bareng",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onChanged: (String? value) => setState(() => _title = value!),
                 validator: (String? value) {
-                  if (value == null || value.isEmpty) return "Judul tidak boleh kosong!";
+                  if (value == null || value.isEmpty)
+                    return "Judul tidak boleh kosong!";
                   return null;
                 },
               ),
@@ -73,12 +83,16 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 decoration: InputDecoration(
                   labelText: "Deskripsi",
                   hintText: "Jelaskan detail aktivitas...",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 maxLines: 3,
-                onChanged: (String? value) => setState(() => _description = value!),
+                onChanged: (String? value) =>
+                    setState(() => _description = value!),
                 validator: (String? value) {
-                  if (value == null || value.isEmpty) return "Deskripsi tidak boleh kosong!";
+                  if (value == null || value.isEmpty)
+                    return "Deskripsi tidak boleh kosong!";
                   return null;
                 },
               ),
@@ -89,15 +103,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 value: _category,
                 decoration: InputDecoration(
                   labelText: "Kategori Olahraga",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 items: _categories.map((String item) {
                   return DropdownMenuItem(
                     value: item,
-                    child: Text(item[0].toUpperCase() + item.substring(1)), // Capitalize
+                    child: Text(
+                      item[0].toUpperCase() + item.substring(1),
+                    ), // Capitalize
                   );
                 }).toList(),
-                onChanged: (String? newValue) => setState(() => _category = newValue!),
+                onChanged: (String? newValue) =>
+                    setState(() => _category = newValue!),
               ),
               const SizedBox(height: 16),
 
@@ -106,11 +125,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 decoration: InputDecoration(
                   labelText: "Lokasi",
                   hintText: "Contoh: GOR Senayan",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onChanged: (String? value) => setState(() => _lokasi = value!),
                 validator: (String? value) {
-                  if (value == null || value.isEmpty) return "Lokasi tidak boleh kosong!";
+                  if (value == null || value.isEmpty)
+                    return "Lokasi tidak boleh kosong!";
                   return null;
                 },
               ),
@@ -122,9 +144,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.calendar_today),
-                      label: Text(_selectedDate == null
-                          ? "Pilih Tanggal"
-                          : "${_selectedDate!.day}-${_selectedDate!.month}-${_selectedDate!.year}"),
+                      label: Text(
+                        _selectedDate == null
+                            ? "Pilih Tanggal"
+                            : "${_selectedDate!.day}-${_selectedDate!.month}-${_selectedDate!.year}",
+                      ),
                       onPressed: () async {
                         final DateTime? picked = await showDatePicker(
                           context: context,
@@ -132,7 +156,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           firstDate: DateTime.now(),
                           lastDate: DateTime(2100),
                         );
-                        if (picked != null) setState(() => _selectedDate = picked);
+                        if (picked != null)
+                          setState(() => _selectedDate = picked);
                       },
                     ),
                   ),
@@ -144,7 +169,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.access_time),
-                      label: Text(_jamMulai == null ? "Jam Mulai" : formatTime(_jamMulai!)),
+                      label: Text(
+                        _jamMulai == null
+                            ? "Jam Mulai"
+                            : formatTime(_jamMulai!),
+                      ),
                       onPressed: () async {
                         final TimeOfDay? picked = await showTimePicker(
                           context: context,
@@ -158,13 +187,18 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.access_time_filled),
-                      label: Text(_jamSelesai == null ? "Jam Selesai" : formatTime(_jamSelesai!)),
+                      label: Text(
+                        _jamSelesai == null
+                            ? "Jam Selesai"
+                            : formatTime(_jamSelesai!),
+                      ),
                       onPressed: () async {
                         final TimeOfDay? picked = await showTimePicker(
                           context: context,
                           initialTime: TimeOfDay.now(),
                         );
-                        if (picked != null) setState(() => _jamSelesai = picked);
+                        if (picked != null)
+                          setState(() => _jamSelesai = picked);
                       },
                     ),
                   ),
@@ -184,9 +218,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       // Validasi tambahan untuk Tanggal dan Jam
-                      if (_selectedDate == null || _jamMulai == null || _jamSelesai == null) {
+                      if (_selectedDate == null ||
+                          _jamMulai == null ||
+                          _jamSelesai == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Lengkapi tanggal dan waktu!")),
+                          const SnackBar(
+                            content: Text("Lengkapi tanggal dan waktu!"),
+                          ),
                         );
                         return;
                       }
@@ -199,7 +237,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           'category': _category,
                           'lokasi': _lokasi,
                           // Format tanggal YYYY-MM-DD sesuai strptime python
-                          'tanggal': "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}",
+                          'tanggal':
+                              "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}",
                           // Format jam HH:MM
                           'jam_mulai': formatTime(_jamMulai!),
                           'jam_selesai': formatTime(_jamSelesai!),
@@ -210,13 +249,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       if (context.mounted) {
                         if (response['success'] == true) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Post berhasil dibuat!")),
+                            const SnackBar(
+                              content: Text("Post berhasil dibuat!"),
+                            ),
                           );
-                          Navigator.pop(context, true); // Kembali ke halaman list
+                          Navigator.pop(
+                            context,
+                            true,
+                          ); // Kembali ke halaman list
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(response['message'] ?? "Gagal menyimpan data."),
+                              content: Text(
+                                response['message'] ?? "Gagal menyimpan data.",
+                              ),
                               backgroundColor: Colors.red,
                             ),
                           );

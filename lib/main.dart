@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
 
-
-import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
-import 'package:move_buddy/Auth_Profile/screens/home_page.dart';
-
+import 'package:Movebuddy/Auth_Profile/screens/login_page.dart';
+import 'package:Movebuddy/Auth_Profile/screens/home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,13 +15,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        Provider<CookieRequest>(create: (_) => CookieRequest()),
-      
-      ],
+      providers: [Provider<CookieRequest>(create: (_) => CookieRequest())],
       child: MaterialApp(
         title: 'Move Buddy',
-        debugShowCheckedModeBanner: false, 
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF84CC16)),
           useMaterial3: true,
@@ -52,15 +47,14 @@ class _RootPageState extends State<RootPage> {
   void initState() {
     super.initState();
     _initUrl();
-    
+
     Future.delayed(Duration.zero, () {
       checkSession();
     });
   }
 
   void _initUrl() {
-      baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id";
-
+    baseUrl = "https://ari-darrell-movebuddy.pbp.cs.ui.ac.id";
   }
 
   Future<void> checkSession() async {
@@ -69,7 +63,8 @@ class _RootPageState extends State<RootPage> {
       final response = await request.get("$baseUrl/check-session/");
 
       if (mounted) {
-        if (request.loggedIn || (response is Map && response['status'] == true)) {
+        if (request.loggedIn ||
+            (response is Map && response['status'] == true)) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const HomePage()),

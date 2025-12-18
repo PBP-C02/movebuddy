@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:move_buddy/Coach/models/coach_entry.dart';
+import 'package:Movebuddy/Coach/models/coach_entry.dart';
 
 class CoachEntryCard extends StatelessWidget {
   final Coach coach;
@@ -25,10 +25,12 @@ class CoachEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAvailable = !coach.isBooked;
-    final statusColor =
-        isAvailable ? const Color(0xFFDFF5E0) : const Color(0xFFFFE6E3);
-    final statusTextColor =
-        isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFD32F2F);
+    final statusColor = isAvailable
+        ? const Color(0xFFDFF5E0)
+        : const Color(0xFFFFE6E3);
+    final statusTextColor = isAvailable
+        ? const Color(0xFF2E7D32)
+        : const Color(0xFFD32F2F);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -59,7 +61,9 @@ class CoachEntryCard extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: statusColor,
                             borderRadius: BorderRadius.circular(18),
@@ -76,12 +80,15 @@ class CoachEntryCard extends StatelessWidget {
                         const Spacer(),
                         Row(
                           children: [
-                            const Icon(Icons.star,
-                                size: 18, color: Colors.amber),
+                            const Icon(
+                              Icons.star,
+                              size: 18,
+                              color: Colors.amber,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               coach.rating.toStringAsFixed(1),
-                               style: const TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
                               ),
@@ -137,8 +144,11 @@ class CoachEntryCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.calendar_month,
-                            size: 18, color: Colors.grey),
+                        const Icon(
+                          Icons.calendar_month,
+                          size: 18,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -152,8 +162,11 @@ class CoachEntryCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 18, color: Colors.grey),
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 18,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(

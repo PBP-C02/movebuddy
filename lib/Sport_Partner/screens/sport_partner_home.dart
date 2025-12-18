@@ -2,11 +2,11 @@ import 'dart:async'; // Wajib untuk Timer (Debounce)
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Sport_Partner/models/partner_post.dart';
-import 'package:move_buddy/Sport_Partner/screens/create_post_form.dart';
-import 'package:move_buddy/Sport_Partner/screens/post_detail_page.dart';
-import 'package:move_buddy/Sport_Partner/widgets/partner_card.dart';
-import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Sport_Partner/models/partner_post.dart';
+import 'package:Movebuddy/Sport_Partner/screens/create_post_form.dart';
+import 'package:Movebuddy/Sport_Partner/screens/post_detail_page.dart';
+import 'package:Movebuddy/Sport_Partner/widgets/partner_card.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
 
 class SportPartnerPage extends StatefulWidget {
   const SportPartnerPage({super.key});
@@ -21,7 +21,7 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
   String _selectedSport = "";
   String _sortOption = "";
   bool _onlyAvailable = false; // Misal: hanya yang slotnya masih ada
-  
+
   final _searchController = TextEditingController();
   Timer? _debounce;
 
@@ -78,16 +78,16 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
     // Membangun Query String secara manual agar backend bisa memfilter
     // Pastikan view Django Anda menangani request.GET.get('q'), request.GET.get('sport'), dst.
     String url = '$baseUrl/json/?';
-    
+
     if (_searchQuery.isNotEmpty) url += 'q=$_searchQuery&';
     if (_selectedSport.isNotEmpty) url += 'sport=$_selectedSport&';
     if (_sortOption.isNotEmpty) url += 'sort=$_sortOption&';
-    
+
     // Logic filter client-side (opsional) atau server-side
     // Jika backend belum support filter, kita filter manual di bawah (tidak efisien tapi jalan).
-    
+
     final response = await request.get(url);
-    
+
     List<PartnerPost> listPosts = [];
     for (var d in response) {
       if (d != null) {
@@ -101,7 +101,7 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
       // Asumsi PartnerPost punya field 'participants' dan 'max_participants'
       // listPosts = listPosts.where((p) => p.fields.participants.length < p.fields.maxParticipants).toList();
     }
-    
+
     return listPosts;
   }
 
@@ -136,19 +136,21 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
     final request = context.watch<CookieRequest>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5F9), // Samakan background dengan Court
+      backgroundColor: const Color(
+        0xFFF3F5F9,
+      ), // Samakan background dengan Court
       appBar: AppBar(
         title: const Text(
-          'Find Your Partner', 
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)
+          'Find Your Partner',
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
         ),
         backgroundColor: const Color(0xFF84CC16),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
+
       // Floating Action Button dihapus karena sudah dipindah ke dalam Filter Card (sesuai request)
       // Jika ingin tetap ada FAB, silakan uncomment. Tapi di CourtList tombol add ada di filter.
-      
       body: SafeArea(
         child: Column(
           children: [
@@ -170,13 +172,20 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
                       return ListView(
                         padding: const EdgeInsets.all(24),
                         children: const [
-                           SizedBox(height: 80),
-                           Center(
+                          SizedBox(height: 80),
+                          Center(
                             child: Column(
                               children: [
-                                Icon(Icons.sports_soccer, size: 60, color: Colors.grey),
+                                Icon(
+                                  Icons.sports_soccer,
+                                  size: 60,
+                                  color: Colors.grey,
+                                ),
                                 SizedBox(height: 16),
-                                Text("Tidak ada aktivitas ditemukan.", style: TextStyle(color: Colors.grey)),
+                                Text(
+                                  "Tidak ada aktivitas ditemukan.",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               ],
                             ),
                           ),
@@ -192,10 +201,11 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
                         return PartnerCard(
                           post: post,
                           onTap: () async {
-                             final result = await Navigator.push(
+                            final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PostDetailPage(post: post),
+                                builder: (context) =>
+                                    PostDetailPage(post: post),
                               ),
                             );
                             if (result == true && mounted) {
@@ -249,7 +259,10 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0,
+                      horizontal: 12,
+                    ),
                   ),
                   onChanged: _onSearchChanged,
                 ),
@@ -260,17 +273,24 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
                 icon: const Icon(Icons.search, size: 18),
                 label: const Text("Cari"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF84CC16), // Sesuaikan warna tema Partner
+                  backgroundColor: const Color(
+                    0xFF84CC16,
+                  ), // Sesuaikan warna tema Partner
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          
+
           // Row 2: Filter Chips
           Wrap(
             spacing: 10,
@@ -312,13 +332,18 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
                           _refreshData(request);
                         },
                         activeColor: const Color(0xFF84CC16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                       const SizedBox(width: 4),
                       const Flexible(
                         child: Text(
                           "Available only",
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -349,8 +374,13 @@ class _SportPartnerPageState extends State<SportPartnerPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF84CC16),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
                 child: const Text("+ Post"),

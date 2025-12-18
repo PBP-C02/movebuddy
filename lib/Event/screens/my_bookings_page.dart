@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Event/utils/event_helpers.dart';
-import 'package:move_buddy/Event/screens/event_detail_page.dart';
-import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/utils/event_helpers.dart';
+import 'package:Movebuddy/Event/screens/event_detail_page.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
 
 class MyBookingsPage extends StatefulWidget {
   const MyBookingsPage({super.key});
@@ -52,7 +52,11 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.bookmark_border, size: 80, color: Colors.grey[400]),
+                  Icon(
+                    Icons.bookmark_border,
+                    size: 80,
+                    color: Colors.grey[400],
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'No bookings yet',
@@ -72,11 +76,19 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF84CC16),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     icon: const Icon(Icons.explore),
-                    label: const Text('Browse Events', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Browse Events',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -112,7 +124,8 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => EventDetailPage(eventId: event['id'] as int),
+                          builder: (context) =>
+                              EventDetailPage(eventId: event['id'] as int),
                         ),
                       );
                     },
@@ -145,13 +158,20 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                                     ),
                                     const SizedBox(height: 4),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF84CC16).withOpacity(0.2),
+                                        color: const Color(
+                                          0xFF84CC16,
+                                        ).withOpacity(0.2),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        EventHelpers.getSportDisplayName(event['sport_type']),
+                                        EventHelpers.getSportDisplayName(
+                                          event['sport_type'],
+                                        ),
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
@@ -167,18 +187,32 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                           const SizedBox(height: 16),
                           Row(
                             children: [
-                              const Icon(Icons.location_on, size: 16, color: Color(0xFF64748B)),
+                              const Icon(
+                                Icons.location_on,
+                                size: 16,
+                                color: Color(0xFF64748B),
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 event['city'],
-                                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF64748B),
+                                ),
                               ),
                               const SizedBox(width: 16),
-                              const Icon(Icons.star, size: 16, color: Colors.amber),
+                              const Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.amber,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 event['rating'],
-                                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF64748B),
+                                ),
                               ),
                             ],
                           ),
@@ -194,7 +228,11 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.calendar_today, size: 16, color: Color(0xFF10B981)),
+                                    const Icon(
+                                      Icons.calendar_today,
+                                      size: 16,
+                                      color: Color(0xFF10B981),
+                                    ),
                                     const SizedBox(width: 8),
                                     const Text(
                                       'Your Registered Dates',

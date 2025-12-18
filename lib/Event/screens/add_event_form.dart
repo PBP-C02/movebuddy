@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Event/utils/event_helpers.dart';
-import 'package:move_buddy/Sport_Partner/constants.dart';
-import 'package:move_buddy/Event/models/event_entry.dart';
+import 'package:Movebuddy/Event/utils/event_helpers.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Event/models/event_entry.dart';
 
 class AddEventForm extends StatefulWidget {
   final EventEntry? initialEvent;
@@ -168,10 +168,7 @@ class _AddEventFormState extends State<AddEventForm> {
             borderRadius: BorderRadius.circular(12),
             child: AspectRatio(
               aspectRatio: 16 / 9,
-              child: Image.memory(
-                data.contentAsBytes(),
-                fit: BoxFit.cover,
-              ),
+              child: Image.memory(data.contentAsBytes(), fit: BoxFit.cover),
             ),
           );
         }
@@ -191,7 +188,11 @@ class _AddEventFormState extends State<AddEventForm> {
             errorBuilder: (context, error, stackTrace) => Container(
               color: const Color(0xFFF1F5F9),
               child: const Center(
-                child: Icon(Icons.broken_image_outlined, color: Color(0xFF94A3B8), size: 40),
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: Color(0xFF94A3B8),
+                  size: 40,
+                ),
               ),
             ),
           ),
@@ -204,10 +205,7 @@ class _AddEventFormState extends State<AddEventForm> {
         borderRadius: BorderRadius.circular(12),
         child: AspectRatio(
           aspectRatio: 16 / 9,
-          child: Image.memory(
-            _uploadedImageBytes!,
-            fit: BoxFit.cover,
-          ),
+          child: Image.memory(_uploadedImageBytes!, fit: BoxFit.cover),
         ),
       );
     }
@@ -275,7 +273,8 @@ class _AddEventFormState extends State<AddEventForm> {
                     hint: 'Weekend Soccer Match',
                     controller: _nameController,
                     onChanged: (value) => _name = value,
-                    validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? 'Harus diisi' : null,
                   ),
                   const SizedBox(height: 12),
                   _buildDropdown(
@@ -317,8 +316,13 @@ class _AddEventFormState extends State<AddEventForm> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF8BC34A),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       elevation: 0,
                     ),
                     onPressed: _pickImage,
@@ -330,9 +334,12 @@ class _AddEventFormState extends State<AddEventForm> {
                     _photoUrlController.text.trim().isNotEmpty
                         ? 'Preview memakai link di atas. Kosongkan jika ingin memakai foto upload.'
                         : _uploadedImageBytes != null
-                            ? 'Foto upload akan dikirim sebagai data URL.'
-                            : 'Tempel link atau upload dari perangkat.',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        ? 'Foto upload akan dikirim sebagai data URL.'
+                        : 'Tempel link atau upload dari perangkat.',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
                   ),
                   const SizedBox(height: 18),
                   const Text(
@@ -344,7 +351,10 @@ class _AddEventFormState extends State<AddEventForm> {
                     label: 'Kota',
                     value: _city.isEmpty ? null : _city,
                     items: EventHelpers.cities
-                        .map((city) => DropdownMenuItem(value: city, child: Text(city)))
+                        .map(
+                          (city) =>
+                              DropdownMenuItem(value: city, child: Text(city)),
+                        )
                         .toList(),
                     onChanged: (value) => setState(() => _city = value ?? ""),
                   ),
@@ -355,7 +365,8 @@ class _AddEventFormState extends State<AddEventForm> {
                     maxLines: 2,
                     controller: _addressController,
                     onChanged: (value) => _fullAddress = value,
-                    validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? 'Harus diisi' : null,
                   ),
                   const SizedBox(height: 12),
                   _buildTextField(
@@ -376,7 +387,8 @@ class _AddEventFormState extends State<AddEventForm> {
                     keyboardType: TextInputType.number,
                     controller: _entryPriceController,
                     onChanged: (value) => _entryPrice = value,
-                    validator: (value) => value == null || value.isEmpty ? 'Harus diisi' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? 'Harus diisi' : null,
                   ),
                   const SizedBox(height: 12),
                   _buildTextField(
@@ -405,8 +417,13 @@ class _AddEventFormState extends State<AddEventForm> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF8BC34A),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       elevation: 0,
                     ),
                     onPressed: selectDates,
@@ -436,11 +453,17 @@ class _AddEventFormState extends State<AddEventForm> {
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           if (_city.isEmpty) {
-                            _showSnackBar('Pilih kota terlebih dahulu', isError: true);
+                            _showSnackBar(
+                              'Pilih kota terlebih dahulu',
+                              isError: true,
+                            );
                             return;
                           }
                           if (selectedDates.isEmpty) {
-                            _showSnackBar('Tambah minimal satu tanggal', isError: true);
+                            _showSnackBar(
+                              'Tambah minimal satu tanggal',
+                              isError: true,
+                            );
                             return;
                           }
 
@@ -448,40 +471,47 @@ class _AddEventFormState extends State<AddEventForm> {
                             return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
                           }).toList();
 
-                          final photoToSend = _photoUrlController.text.trim().isNotEmpty
+                          final photoToSend =
+                              _photoUrlController.text.trim().isNotEmpty
                               ? _photoUrlController.text.trim()
                               : (_uploadedImageDataUrl ?? "");
 
                           try {
-                          final payload = {
-                            'name': _name,
-                            'sport_type': _sportType,
-                            'description': _description,
-                            'city': _city,
-                            'full_address': _fullAddress,
-                            'entry_price': _entryPrice,
-                            'activities': _activities,
-                            'rating': _rating,
-                            'google_maps_link': _googleMapsLink,
-                            'category': _category,
-                            'status': _status,
-                            'schedule_dates': scheduleDates,
-                            'photo_url': photoToSend,
-                          };
+                            final payload = {
+                              'name': _name,
+                              'sport_type': _sportType,
+                              'description': _description,
+                              'city': _city,
+                              'full_address': _fullAddress,
+                              'entry_price': _entryPrice,
+                              'activities': _activities,
+                              'rating': _rating,
+                              'google_maps_link': _googleMapsLink,
+                              'category': _category,
+                              'status': _status,
+                              'schedule_dates': scheduleDates,
+                              'photo_url': photoToSend,
+                            };
 
-                          final response = await _submitEvent(request, payload);
+                            final response = await _submitEvent(
+                              request,
+                              payload,
+                            );
 
-                          if (context.mounted) {
-                            if (response is Map && response['success'] == true) {
-                              _showSnackBar(
-                                widget.initialEvent == null
+                            if (context.mounted) {
+                              if (response is Map &&
+                                  response['success'] == true) {
+                                _showSnackBar(
+                                  widget.initialEvent == null
                                       ? 'Event created successfully!'
                                       : 'Event updated successfully!',
                                 );
                                 Navigator.pop(context, true);
                               } else {
                                 final message = _stringifyMessage(
-                                  (response is Map ? response['message'] : null) ??
+                                  (response is Map
+                                          ? response['message']
+                                          : null) ??
                                       'Failed to ${widget.initialEvent == null ? 'create' : 'update'} event',
                                 );
                                 _showSnackBar(message, isError: true);
@@ -496,19 +526,27 @@ class _AddEventFormState extends State<AddEventForm> {
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              _showSnackBar(_stringifyMessage(e), isError: true);
+                              _showSnackBar(
+                                _stringifyMessage(e),
+                                isError: true,
+                              );
                             }
                           }
                         }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF8BC34A),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text(
                         "Simpan Event",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -595,9 +633,6 @@ class _AddEventFormState extends State<AddEventForm> {
         : "$baseUrl/event/json/create/";
 
     // Use CookieRequest so session cookies/CSRF stay in sync with login state
-    return request.postJson(
-      url,
-      jsonEncode(payload),
-    );
+    return request.postJson(url, jsonEncode(payload));
   }
 }

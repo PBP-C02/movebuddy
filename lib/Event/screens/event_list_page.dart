@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
-import 'package:move_buddy/Event/models/event_entry.dart';
-import 'package:move_buddy/Event/screens/event_detail_page.dart';
-import 'package:move_buddy/Event/screens/add_event_form.dart';
-import 'package:move_buddy/Event/screens/edit_event_form.dart';
-import 'package:move_buddy/Event/widgets/event_card.dart';
-import 'package:move_buddy/Event/utils/event_helpers.dart';
-import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Coach/screens/coach_entry_list.dart';
+import 'package:Movebuddy/Event/models/event_entry.dart';
+import 'package:Movebuddy/Event/screens/event_detail_page.dart';
+import 'package:Movebuddy/Event/screens/add_event_form.dart';
+import 'package:Movebuddy/Event/screens/edit_event_form.dart';
+import 'package:Movebuddy/Event/widgets/event_card.dart';
+import 'package:Movebuddy/Event/utils/event_helpers.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
 
 class EventListPage extends StatefulWidget {
   const EventListPage({super.key});
@@ -53,12 +53,14 @@ class _EventListPageState extends State<EventListPage> {
   }
 
   Future<List<EventEntry>> fetchEvents(CookieRequest request) async {
-    final uri = Uri.parse('$baseUrl/event/ajax/search/').replace(queryParameters: {
-      if (_selectedSport.isNotEmpty) 'sport': _selectedSport,
-      if (_availableOnly) 'available': 'true',
-      if (_searchQuery.isNotEmpty) 'search': _searchQuery,
-      if (_selectedCity.isNotEmpty) 'city': _selectedCity,
-    });
+    final uri = Uri.parse('$baseUrl/event/ajax/search/').replace(
+      queryParameters: {
+        if (_selectedSport.isNotEmpty) 'sport': _selectedSport,
+        if (_availableOnly) 'available': 'true',
+        if (_searchQuery.isNotEmpty) 'search': _searchQuery,
+        if (_selectedCity.isNotEmpty) 'city': _selectedCity,
+      },
+    );
 
     final response = await request.get(uri.toString());
 
@@ -69,8 +71,8 @@ class _EventListPageState extends State<EventListPage> {
     final eventData = response is Map<String, dynamic>
         ? (response['events'] as List<dynamic>? ?? [])
         : response is List
-            ? response
-            : [];
+        ? response
+        : [];
 
     final events = eventData
         .whereType<Map<String, dynamic>>()
@@ -105,7 +107,9 @@ class _EventListPageState extends State<EventListPage> {
 
   void _refreshData(CookieRequest request) {
     setState(() {
-      _eventsFuture = _activeTab == 'bookings' ? fetchBookings(request) : fetchEvents(request);
+      _eventsFuture = _activeTab == 'bookings'
+          ? fetchBookings(request)
+          : fetchEvents(request);
     });
   }
 
@@ -132,7 +136,8 @@ class _EventListPageState extends State<EventListPage> {
     var filtered = events.where((event) {
       if (_activeTab == 'created' && !event.isOrganizer) return false;
       if (_activeTab == 'bookings' && !event.isRegistered) return false;
-      if (_availableOnly && event.status.toLowerCase() != 'available') return false;
+      if (_availableOnly && event.status.toLowerCase() != 'available')
+        return false;
 
       final price = _extractPrice(event.entryPrice);
       if (minPrice != null && price < minPrice) return false;
@@ -140,10 +145,14 @@ class _EventListPageState extends State<EventListPage> {
       return true;
     }).toList();
 
-    int compareDate(EventEntry a, EventEntry b) => b.createdAt.compareTo(a.createdAt);
-    int comparePriceAsc(EventEntry a, EventEntry b) => _extractPrice(a.entryPrice).compareTo(_extractPrice(b.entryPrice));
-    int comparePriceDesc(EventEntry a, EventEntry b) => _extractPrice(b.entryPrice).compareTo(_extractPrice(a.entryPrice));
-    int compareRatingDesc(EventEntry a, EventEntry b) => _extractRating(b.rating).compareTo(_extractRating(a.rating));
+    int compareDate(EventEntry a, EventEntry b) =>
+        b.createdAt.compareTo(a.createdAt);
+    int comparePriceAsc(EventEntry a, EventEntry b) =>
+        _extractPrice(a.entryPrice).compareTo(_extractPrice(b.entryPrice));
+    int comparePriceDesc(EventEntry a, EventEntry b) =>
+        _extractPrice(b.entryPrice).compareTo(_extractPrice(a.entryPrice));
+    int compareRatingDesc(EventEntry a, EventEntry b) =>
+        _extractRating(b.rating).compareTo(_extractRating(a.rating));
 
     switch (_sortBy) {
       case 'price_low':
@@ -205,7 +214,9 @@ class _EventListPageState extends State<EventListPage> {
               String label, {
               bool highlightError = false,
             }) {
-              final borderColor = highlightError ? Colors.red : const Color(0xFFD7E0EB);
+              final borderColor = highlightError
+                  ? Colors.red
+                  : const Color(0xFFD7E0EB);
               return InputDecoration(
                 labelText: label,
                 prefixText: 'Rp ',
@@ -220,7 +231,9 @@ class _EventListPageState extends State<EventListPage> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: highlightError ? Colors.red : const Color(0xFF182435),
+                    color: highlightError
+                        ? Colors.red
+                        : const Color(0xFF182435),
                     width: 1.5,
                   ),
                 ),
@@ -234,8 +247,13 @@ class _EventListPageState extends State<EventListPage> {
             }
 
             return Dialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 32),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 22,
+                vertical: 32,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Column(
@@ -247,7 +265,10 @@ class _EventListPageState extends State<EventListPage> {
                       children: [
                         const Text(
                           'Filter Harga Event',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         IconButton(
                           onPressed: () => Navigator.of(dialogCtx).pop(),
@@ -287,7 +308,10 @@ class _EventListPageState extends State<EventListPage> {
                       const SizedBox(height: 6),
                       Text(
                         errorText!,
-                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -305,14 +329,19 @@ class _EventListPageState extends State<EventListPage> {
                         const Spacer(),
                         ElevatedButton(
                           onPressed: () {
-                            final minVal = _parseFilterPrice(_minPriceController.text) ?? 0;
-                            final maxVal = _parseFilterPrice(_maxPriceController.text) ?? 0;
+                            final minVal =
+                                _parseFilterPrice(_minPriceController.text) ??
+                                0;
+                            final maxVal =
+                                _parseFilterPrice(_maxPriceController.text) ??
+                                0;
 
                             if (_minPriceController.text.trim().isNotEmpty &&
                                 _maxPriceController.text.trim().isNotEmpty &&
                                 minVal > maxVal) {
                               setStateDialog(() {
-                                errorText = 'Harga minimum tidak boleh lebih besar dari maksimum.';
+                                errorText =
+                                    'Harga minimum tidak boleh lebih besar dari maksimum.';
                               });
                               return;
                             }
@@ -387,7 +416,8 @@ class _EventListPageState extends State<EventListPage> {
       );
       final success = decoded is Map && decoded['success'] == true;
       final message = _stringifyMessage(
-        (decoded is Map ? decoded['message'] : null) ?? 'Gagal menghapus event.',
+        (decoded is Map ? decoded['message'] : null) ??
+            'Gagal menghapus event.',
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -436,7 +466,8 @@ class _EventListPageState extends State<EventListPage> {
 
   Future<void> _openEditEvent(EventEntry event, CookieRequest request) async {
     // Prefer fresh detail but fallback to existing data
-    EventEntry? detailed = await _fetchEventDetailForEdit(request, eventId: event.id) ?? event;
+    EventEntry? detailed =
+        await _fetchEventDetailForEdit(request, eventId: event.id) ?? event;
     if (!mounted) return;
 
     final result = await Navigator.push(
@@ -471,9 +502,9 @@ class _EventListPageState extends State<EventListPage> {
       MaterialPageRoute(builder: (context) => const AddEventForm()),
     );
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Event berhasil dibuat!")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Event berhasil dibuat!")));
       _refreshData(context.read<CookieRequest>());
     }
   }
@@ -507,9 +538,7 @@ class _EventListPageState extends State<EventListPage> {
         child: FutureBuilder<List<EventEntry>>(
           future: _eventsFuture,
           builder: (context, snapshot) {
-            final children = <Widget>[
-              _buildFilterCard(request),
-            ];
+            final children = <Widget>[_buildFilterCard(request)];
 
             if (snapshot.connectionState == ConnectionState.waiting) {
               children.add(
@@ -530,12 +559,19 @@ class _EventListPageState extends State<EventListPage> {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.redAccent,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'Failed to load events\n${snapshot.error}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
@@ -570,7 +606,10 @@ class _EventListPageState extends State<EventListPage> {
             if (filteredEvents.isEmpty) {
               children.add(
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
                   child: Column(
                     children: [
                       _buildResultHeader(0, request),
@@ -589,7 +628,11 @@ class _EventListPageState extends State<EventListPage> {
                         ),
                         child: Column(
                           children: [
-                            const Icon(Icons.search_off, size: 48, color: Color(0xFF9CA3AF)),
+                            const Icon(
+                              Icons.search_off,
+                              size: 48,
+                              color: Color(0xFF9CA3AF),
+                            ),
                             const SizedBox(height: 12),
                             const Text(
                               "Tidak ada event yang cocok dengan filter.",
@@ -622,23 +665,22 @@ class _EventListPageState extends State<EventListPage> {
               );
             }
 
-            children.addAll(
-              [
-                _buildResultHeader(filteredEvents.length, request),
-                ...filteredEvents.map(
-                  (event) => Column(
-                    children: [
-                      EventCard(
-                        event: event,
-                        onTap: () => _openEventDetail(event, request),
-                      ),
-                      if (event.isOrganizer) _buildOrganizerQuickActions(event, request),
-                    ],
-                  ),
+            children.addAll([
+              _buildResultHeader(filteredEvents.length, request),
+              ...filteredEvents.map(
+                (event) => Column(
+                  children: [
+                    EventCard(
+                      event: event,
+                      onTap: () => _openEventDetail(event, request),
+                    ),
+                    if (event.isOrganizer)
+                      _buildOrganizerQuickActions(event, request),
+                  ],
                 ),
-                const SizedBox(height: 24),
-              ],
-            );
+              ),
+              const SizedBox(height: 24),
+            ]);
 
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -678,14 +720,20 @@ class _EventListPageState extends State<EventListPage> {
                     children: [
                       Text(
                         "Menampilkan $count event",
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         _hasActiveFilters
                             ? "Filter aktif sedang diterapkan."
                             : "Menampilkan semua event tanpa filter tambahan.",
-                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -695,7 +743,9 @@ class _EventListPageState extends State<EventListPage> {
                     onPressed: () => _resetFilters(request),
                     icon: const Icon(Icons.refresh),
                     label: const Text("Reset"),
-                    style: TextButton.styleFrom(foregroundColor: const Color(0xFF182435)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF182435),
+                    ),
                   ),
               ],
             ),
@@ -707,14 +757,16 @@ class _EventListPageState extends State<EventListPage> {
                     value: _sortBy,
                     decoration: InputDecoration(
                       labelText: 'Urutkan',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'newest',
-                        child: Text('Terbaru'),
-                      ),
+                      DropdownMenuItem(value: 'newest', child: Text('Terbaru')),
                       DropdownMenuItem(
                         value: 'price_low',
                         child: Text('Harga terendah'),
@@ -728,7 +780,8 @@ class _EventListPageState extends State<EventListPage> {
                         child: Text('Rating tertinggi'),
                       ),
                     ],
-                    onChanged: (val) => setState(() => _sortBy = val ?? 'newest'),
+                    onChanged: (val) =>
+                        setState(() => _sortBy = val ?? 'newest'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -750,7 +803,11 @@ class _EventListPageState extends State<EventListPage> {
             const SizedBox(height: 8),
             const Text(
               "Butuh pendamping latihan? Lanjutkan ke halaman Coach untuk menemukan pelatih yang sesuai dengan sport dan kota pilihan.",
-              style: TextStyle(color: Color(0xFF6B7280), fontSize: 12, height: 1.4),
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 12,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -836,10 +893,16 @@ class _EventListPageState extends State<EventListPage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: "Cari event atau lokasi...",
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFF8293A7)),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF8293A7),
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: Color(0xFF94A3B8)),
+                            icon: const Icon(
+                              Icons.clear,
+                              color: Color(0xFF94A3B8),
+                            ),
                             onPressed: () {
                               _searchController.clear();
                               _onSearchChanged('', request);
@@ -854,9 +917,15 @@ class _EventListPageState extends State<EventListPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFB5D38C), width: 1.5),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFB5D38C),
+                        width: 1.5,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0,
+                      horizontal: 12,
+                    ),
                   ),
                   onChanged: (val) => _onSearchChanged(val, request),
                 ),
@@ -876,8 +945,13 @@ class _EventListPageState extends State<EventListPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFB7DC81),
                   foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -890,15 +964,26 @@ class _EventListPageState extends State<EventListPage> {
                 child: DropdownButtonFormField<String>(
                   value: _selectedCity.isEmpty ? '' : _selectedCity,
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('Semua kota')),
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Semua kota'),
+                    ),
                     ...EventHelpers.cities
-                        .map((city) => DropdownMenuItem(value: city, child: Text(city)))
+                        .map(
+                          (city) =>
+                              DropdownMenuItem(value: city, child: Text(city)),
+                        )
                         .toList(),
                   ],
                   decoration: InputDecoration(
                     labelText: 'Kota',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                   ),
                   onChanged: (val) {
                     setState(() => _selectedCity = val ?? '');
@@ -911,16 +996,16 @@ class _EventListPageState extends State<EventListPage> {
                 child: OutlinedButton.icon(
                   onPressed: _openPriceFilterSheet,
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                     side: const BorderSide(color: Color(0xFFB7DC81)),
                     foregroundColor: const Color(0xFF182435),
                     backgroundColor: const Color(0xFFF8FAFD),
                   ),
                   icon: const Icon(Icons.price_change),
-                  label: Text(
-                    _priceSummary(),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  label: Text(_priceSummary(), overflow: TextOverflow.ellipsis),
                 ),
               ),
             ],
@@ -929,13 +1014,23 @@ class _EventListPageState extends State<EventListPage> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: [
-                _buildSportChip('', "All"),
-                ...EventHelpers.sportTypes.map((sport) => _buildSportChip(
-                      sport["value"] ?? "",
-                      sport["label"] ?? "",
-                    )),
-              ].map((w) => Padding(padding: const EdgeInsets.only(right: 8), child: w)).toList(),
+              children:
+                  [
+                        _buildSportChip('', "All"),
+                        ...EventHelpers.sportTypes.map(
+                          (sport) => _buildSportChip(
+                            sport["value"] ?? "",
+                            sport["label"] ?? "",
+                          ),
+                        ),
+                      ]
+                      .map(
+                        (w) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: w,
+                        ),
+                      )
+                      .toList(),
             ),
           ),
           const SizedBox(height: 12),
@@ -946,18 +1041,30 @@ class _EventListPageState extends State<EventListPage> {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _buildTabPill("All", "all", onTap: () {
-                      setState(() => _activeTab = 'all');
-                      _refreshData(request);
-                    }),
-                    _buildTabPill("My Bookings", "bookings", onTap: () {
-                      setState(() => _activeTab = 'bookings');
-                      _refreshData(request);
-                    }),
-                    _buildTabPill("Created Events", "created", onTap: () {
-                      setState(() => _activeTab = 'created');
-                      _refreshData(request);
-                    }),
+                    _buildTabPill(
+                      "All",
+                      "all",
+                      onTap: () {
+                        setState(() => _activeTab = 'all');
+                        _refreshData(request);
+                      },
+                    ),
+                    _buildTabPill(
+                      "My Bookings",
+                      "bookings",
+                      onTap: () {
+                        setState(() => _activeTab = 'bookings');
+                        _refreshData(request);
+                      },
+                    ),
+                    _buildTabPill(
+                      "Created Events",
+                      "created",
+                      onTap: () {
+                        setState(() => _activeTab = 'created');
+                        _refreshData(request);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -969,7 +1076,10 @@ class _EventListPageState extends State<EventListPage> {
                   _refreshData(request);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -984,12 +1094,17 @@ class _EventListPageState extends State<EventListPage> {
                           _refreshData(request);
                         },
                         activeColor: const Color(0xFFB7DC81),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                       const SizedBox(width: 6),
                       const Text(
                         "Tersedia saja",
-                        style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF5F6C7B)),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF5F6C7B),
+                        ),
                       ),
                     ],
                   ),
@@ -1031,7 +1146,9 @@ class _EventListPageState extends State<EventListPage> {
       },
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: selected ? const Color(0xFFB7DC81) : const Color(0xFFCBD5E1)),
+        side: BorderSide(
+          color: selected ? const Color(0xFFB7DC81) : const Color(0xFFCBD5E1),
+        ),
       ),
       backgroundColor: Colors.white,
     );

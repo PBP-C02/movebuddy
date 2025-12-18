@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
-import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
-import 'package:move_buddy/Court/screens/court_list_screen.dart';
-import 'package:move_buddy/Event/screens/event_list_page.dart';
-import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
+import 'package:Movebuddy/Auth_Profile/screens/login_page.dart';
+import 'package:Movebuddy/Coach/screens/coach_entry_list.dart';
+import 'package:Movebuddy/Court/screens/court_list_screen.dart';
+import 'package:Movebuddy/Event/screens/event_list_page.dart';
+import 'package:Movebuddy/Sport_Partner/screens/sport_partner_home.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -67,7 +67,9 @@ class _ProfilePageState extends State<ProfilePage> {
         _emailController.text = (data['email'] ?? '').toString();
         _gender = (genderCode == 'L' || genderCode == 'P') ? genderCode : null;
         _birthDate = parsedBirth;
-        _tanggalController.text = parsedBirth != null ? _formatDate(parsedBirth) : birthDateString;
+        _tanggalController.text = parsedBirth != null
+            ? _formatDate(parsedBirth)
+            : birthDateString;
         _nomorHpController.text = (data['nomor_handphone'] ?? '').toString();
       } else {
         _showSnack(response['message'] ?? 'Gagal memuat profil');
@@ -93,7 +95,8 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    if (_namaController.text.trim().isEmpty || _nomorHpController.text.trim().isEmpty) {
+    if (_namaController.text.trim().isEmpty ||
+        _nomorHpController.text.trim().isEmpty) {
       _showSnack('Semua field kecuali email harus diisi');
       return;
     }
@@ -102,12 +105,15 @@ class _ProfilePageState extends State<ProfilePage> {
     final request = context.read<CookieRequest>();
 
     try {
-      final response = await request.postJson('${baseUrl}profile/api/', jsonEncode({
-        'nama': _namaController.text.trim(),
-        'kelamin': _gender,
-        'tanggal_lahir': _formatDate(_birthDate!),
-        'nomor_handphone': _nomorHpController.text.trim(),
-      }));
+      final response = await request.postJson(
+        '${baseUrl}profile/api/',
+        jsonEncode({
+          'nama': _namaController.text.trim(),
+          'kelamin': _gender,
+          'tanggal_lahir': _formatDate(_birthDate!),
+          'nomor_handphone': _nomorHpController.text.trim(),
+        }),
+      );
 
       if (!mounted) return;
 
@@ -126,9 +132,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _logout() async {
@@ -154,9 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Logout'),
         content: const Text('Apakah Anda yakin ingin keluar?'),
         actions: [
@@ -203,7 +207,10 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildHeader(context),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 24,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 520),
@@ -271,10 +278,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                     onPressed: _saving
                                         ? null
                                         : _loading
-                                            ? null
-                                            : _isEditing
-                                                ? _submitUpdate
-                                                : () => setState(() => _isEditing = true),
+                                        ? null
+                                        : _isEditing
+                                        ? _submitUpdate
+                                        : () =>
+                                              setState(() => _isEditing = true),
                                     child: _saving
                                         ? const SizedBox(
                                             height: 18,
@@ -338,7 +346,10 @@ class _ProfilePageState extends State<ProfilePage> {
               hintText: hint,
               filled: true,
               fillColor: enabled ? Colors.white : Colors.grey.shade200,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 14,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -391,7 +402,10 @@ class _ProfilePageState extends State<ProfilePage> {
             decoration: InputDecoration(
               filled: true,
               fillColor: enabled ? Colors.white : Colors.grey.shade200,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 4,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -446,7 +460,10 @@ class _ProfilePageState extends State<ProfilePage> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: enabled ? Colors.white : Colors.grey.shade200,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: Colors.grey.shade300),
@@ -492,8 +509,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _pickBirthDate() async {
     final initialDate = _birthDate ?? DateTime(2000, 1, 1);
     final today = DateTime.now();
-    final safeInitial =
-        initialDate.isAfter(today) ? today : initialDate;
+    final safeInitial = initialDate.isAfter(today) ? today : initialDate;
 
     final picked = await showDatePicker(
       context: context,
@@ -599,7 +615,10 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF0B0B0B), Color(0xFF1C1C1C)],

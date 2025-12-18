@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'package:move_buddy/Sport_Partner/constants.dart';
+import 'package:Movebuddy/Sport_Partner/constants.dart';
 
-List<EventEntry> eventEntryFromJson(String str) => 
+List<EventEntry> eventEntryFromJson(String str) =>
     List<EventEntry>.from(json.decode(str).map((x) => EventEntry.fromJson(x)));
 
-String eventEntryToJson(List<EventEntry> data) => 
+String eventEntryToJson(List<EventEntry> data) =>
     json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
 
 class EventEntry {
@@ -54,11 +54,12 @@ class EventEntry {
 
   factory EventEntry.fromJson(Map<String, dynamic> json) {
     final rawPhotoUrl = _asString(json["photo_url"]);
-    final resolvedPhotoUrl = (rawPhotoUrl.startsWith("http") || rawPhotoUrl.startsWith("data:"))
+    final resolvedPhotoUrl =
+        (rawPhotoUrl.startsWith("http") || rawPhotoUrl.startsWith("data:"))
         ? rawPhotoUrl
         : rawPhotoUrl.isNotEmpty
-            ? "$baseUrl$rawPhotoUrl"
-            : "";
+        ? "$baseUrl$rawPhotoUrl"
+        : "";
 
     return EventEntry(
       id: _asString(json["id"]),
@@ -80,9 +81,7 @@ class EventEntry {
       category: _asString(json["category"]),
       organizerId: _asInt(json["organizer_id"]),
       organizerName: _asString(
-        json["organizer_name"] ??
-            json["organizer"] ??
-            "",
+        json["organizer_name"] ?? json["organizer"] ?? "",
       ),
       createdAt: json["created_at"] != null
           ? DateTime.tryParse(json["created_at"]) ?? DateTime.now()
@@ -91,7 +90,8 @@ class EventEntry {
       isRegistered: json["is_registered"] ?? false,
       schedules: json["schedules"] != null
           ? List<EventSchedule>.from(
-              json["schedules"].map((x) => EventSchedule.fromJson(x)))
+              json["schedules"].map((x) => EventSchedule.fromJson(x)),
+            )
           : null,
       userSchedules: json["user_schedules"] != null
           ? List<String>.from(json["user_schedules"])
@@ -100,18 +100,18 @@ class EventEntry {
   }
 
   Map<String, dynamic> toJson() => {
-        "id": id,
-        "name": name,
-        "sport_type": sportType,
-        "description": description,
-        "city": city,
-        "full_address": fullAddress,
-        "entry_price": entryPrice,
-        "activities": activities,
-        "rating": rating,
-        "status": status,
-        "category": category,
-      };
+    "id": id,
+    "name": name,
+    "sport_type": sportType,
+    "description": description,
+    "city": city,
+    "full_address": fullAddress,
+    "entry_price": entryPrice,
+    "activities": activities,
+    "rating": rating,
+    "status": status,
+    "category": category,
+  };
 }
 
 int _asInt(dynamic value) {
@@ -132,18 +132,16 @@ class EventSchedule {
   String id;
   DateTime date;
 
-  EventSchedule({
-    required this.id,
-    required this.date,
-  });
+  EventSchedule({required this.id, required this.date});
 
   factory EventSchedule.fromJson(Map<String, dynamic> json) => EventSchedule(
-        id: _asString(json["id"]),
-        date: DateTime.parse(json["date"]),
-      );
+    id: _asString(json["id"]),
+    date: DateTime.parse(json["date"]),
+  );
 
   Map<String, dynamic> toJson() => {
-        "id": id,
-        "date": "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}",
-      };
+    "id": id,
+    "date":
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}",
+  };
 }

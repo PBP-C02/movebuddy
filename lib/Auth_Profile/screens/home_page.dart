@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pbp_django_auth/pbp_django_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:move_buddy/Auth_Profile/screens/login_page.dart';
-import 'package:move_buddy/Auth_Profile/screens/profile_page.dart';
-import 'package:move_buddy/Coach/screens/coach_entry_list.dart';
-import 'package:move_buddy/Court/screens/court_list_screen.dart';
-import 'package:move_buddy/Event/screens/event_list_page.dart';
-import 'package:move_buddy/Sport_Partner/screens/sport_partner_home.dart';
+import 'package:Movebuddy/Auth_Profile/screens/login_page.dart';
+import 'package:Movebuddy/Auth_Profile/screens/profile_page.dart';
+import 'package:Movebuddy/Coach/screens/coach_entry_list.dart';
+import 'package:Movebuddy/Court/screens/court_list_screen.dart';
+import 'package:Movebuddy/Event/screens/event_list_page.dart';
+import 'package:Movebuddy/Sport_Partner/screens/sport_partner_home.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -63,9 +63,7 @@ class _HomePageState extends State<HomePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Logout'),
         content: const Text('Apakah Anda yakin ingin keluar?'),
         actions: [
@@ -183,8 +181,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildContent(BuildContext context) {
-    final greetingName =
-        (_fullName != null && _fullName!.isNotEmpty) ? _fullName! : 'Move Buddy user';
+    final greetingName = (_fullName != null && _fullName!.isNotEmpty)
+        ? _fullName!
+        : 'Move Buddy user';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,12 +254,15 @@ class _HomePageState extends State<HomePage> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const CoachEntryListPage()),
+              MaterialPageRoute(
+                builder: (context) => const CoachEntryListPage(),
+              ),
             );
           },
         ),
         _buildActionCard(
-          title: 'Lagi nyari court yang dapat digunakan untuk aktivitas olahraga?',
+          title:
+              'Lagi nyari court yang dapat digunakan untuk aktivitas olahraga?',
           buttonLabel: 'Cari Court',
           onTap: () {
             Navigator.push(
@@ -283,9 +285,7 @@ class _HomePageState extends State<HomePage> {
       color: Colors.white,
       elevation: 8,
       shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         child: Column(
@@ -365,7 +365,10 @@ class _HomePageState extends State<HomePage> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF0B0B0B), Color(0xFF1C1C1C)],
